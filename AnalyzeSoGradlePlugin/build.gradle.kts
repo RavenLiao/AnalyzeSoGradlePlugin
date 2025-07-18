@@ -1,0 +1,25 @@
+plugins {
+    `kotlin-dsl`
+    `version-catalog`
+}
+
+repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+dependencies {
+    implementation(libs.android.build)
+}
+
+gradlePlugin {
+    plugins {
+        register("analyze-so") {
+            group = "io.github.ravenliao"
+            id = "${group}.analyze-so"
+            implementationClass = "io.github.ravenliao.plugin.AnalyzeSoGradlePlugin"
+            version = "0.0.1"
+        }
+    }
+}
