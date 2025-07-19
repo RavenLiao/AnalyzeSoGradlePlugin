@@ -55,6 +55,9 @@ abstract class AnalyzeSoTask : DefaultTask() {
         reportFile.convention(
             project.layout.buildDirectory.file("reports/analyze-so/analyze-so-report.json")
         )
+
+        // 强制任务每次都执行，不走缓存
+        outputs.upToDateWhen { false }
     }
 
     @TaskAction
