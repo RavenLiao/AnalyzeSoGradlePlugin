@@ -18,6 +18,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions.add("flavors")
+    productFlavors {
+        create("Aflavor")
+        create("Bflavor")
+    }
+
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -37,6 +44,6 @@ android {
 }
 
 dependencies{
-    implementation(libs.mmkv)
+    debugImplementation(libs.mmkv)
     implementation(project(":libraryDemo"))
 }

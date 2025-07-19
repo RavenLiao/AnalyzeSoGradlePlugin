@@ -15,6 +15,12 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
+    flavorDimensions.add("flavors")
+    productFlavors {
+        create("Aflavor")
+        create("Bflavor")
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
