@@ -1,6 +1,7 @@
 plugins {
     `kotlin-dsl`
     alias(libs.plugins.serialization.plugin)
+    alias(libs.plugins.mavenpublish)
 }
 
 repositories {
