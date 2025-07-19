@@ -1,6 +1,7 @@
 plugins {
     `kotlin-dsl`
     `version-catalog`
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
 }
 
 repositories {
@@ -11,6 +12,7 @@ repositories {
 
 dependencies {
     implementation(libs.android.build)
+    implementation(libs.kotlinx.serialization.json)
 }
 
 gradlePlugin {

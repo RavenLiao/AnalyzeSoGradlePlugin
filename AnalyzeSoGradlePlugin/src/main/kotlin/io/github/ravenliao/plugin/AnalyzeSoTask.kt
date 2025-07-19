@@ -1,5 +1,7 @@
 package io.github.ravenliao.plugin
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Attribute
@@ -63,7 +65,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
             val configuration = findConfiguration(variant)
             if (configuration == null) {
                 logger.warn("Configuration for variant '$variant' not found. Skipping analysis.")
-                writeEmptyReport()
+                generateReport(emptyList())
                 return
             }
 
@@ -199,73 +201,14 @@ abstract class AnalyzeSoTask : DefaultTask() {
 
         // 确保输出目录存在
         outputFile.parentFile?.mkdirs()
-
-        val jsonContent = buildJsonReport(modules)
+        val json = Json { prettyPrint = true }
+        val jsonContent = json.encodeToString(modules)
         outputFile.writeText(jsonContent, Charsets.UTF_8)
 
         logger.info("SO analysis report generated: ${outputFile.absolutePath}")
 
         // 更新内部属性（用于缓存）
         analyzedModules.set(modules)
-    }
-
-    /**
-     * 构建 JSON 报告
-     */
-    private fun buildJsonReport(modules: List<ModuleSoInfo>): String {
-        return buildString {
-            appendLine("[")
-            modules.forEachIndexed { index, module ->
-                append("  {")
-                appendLine()
-                append("    \"moduleName\": \"${escapeJsonString(module.moduleName)}\",")
-                appendLine()
-                append("    \"modulePath\": \"${escapeJsonString(module.modulePath)}\",")
-                appendLine()
-                append("    \"soFiles\": [")
-                appendLine()
-
-                module.soFiles.forEachIndexed { soIndex, soFileInfo ->
-                    append("      {")
-                    append("\"fileName\": \"${escapeJsonString(soFileInfo.fileName)}\", ")
-                    append("\"architectures\": [")
-                    soFileInfo.architectures.forEachIndexed { archIndex, arch ->
-                        append("\"${escapeJsonString(arch)}\"")
-                        if (archIndex < soFileInfo.architectures.size - 1) append(", ")
-                    }
-                    append("]}")
-                    if (soIndex < module.soFiles.size - 1) append(",")
-                    appendLine()
-                }
-
-                append("    ]")
-                appendLine()
-                append("  }")
-                if (index < modules.size - 1) append(",")
-                appendLine()
-            }
-            append("]")
-        }
-    }
-
-    /**
-     * JSON 字符串转义
-     */
-    private fun escapeJsonString(value: String): String {
-        return value.replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\b", "\\b")
-            .replace("\u000C", "\\f")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
-            .replace("\t", "\\t")
-    }
-
-    /**
-     * 写入空报告
-     */
-    private fun writeEmptyReport() {
-        generateReport(emptyList())
     }
 
     /**
@@ -295,7 +238,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
                 } else {
                     module.soFiles.forEach { soFileInfo ->
                         logger.lifecycle(
-                            "    - ${soFileInfo.fileName}: [${
+                            "    - ${soFileInfo.name}: [${
                                 soFileInfo.architectures.joinToString(
                                     ", "
                                 )
