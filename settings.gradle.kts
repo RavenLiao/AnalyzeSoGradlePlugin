@@ -42,3 +42,4 @@ repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
 rootProject.name = "AnalyzeSoGradlePlugin"
 include(":app")
+include(":libraryDemo")

@@ -1,21 +1,18 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     id("io.github.ravenliao.analyze-so")
 }
 
 android {
-    namespace = "io.github.ravenliao.demo"
+    namespace = "io.github.ravenliao.librarydemo"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "io.github.ravenliao.analyzesogradleplugin"
         minSdk = libs.versions.minSdk.get().toInt()
-        targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -36,7 +33,6 @@ android {
     }
 }
 
-dependencies{
-    implementation(libs.mmkv)
-    implementation(project(":libraryDemo"))
+dependencies {
+    implementation(libs.gsyvideoplayer)
 }
