@@ -6,19 +6,12 @@ import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
-import java.io.Serializable
-
-/**
- * 表示包含 SO 文件的模块信息
- */
-data class ModuleSoInfo(
-    val moduleName: String,
-    val soFiles: List<String>,
-    val modulePath: String
-) : Serializable
 
 /**
  * 分析 Android 项目中 SO 文件依赖的 Gradle Task
@@ -165,11 +158,11 @@ abstract class AnalyzeSoTask : DefaultTask() {
     /**
      * 从目录中收集所有 SO 文件
      */
-    private fun collectSoFilesFromDirectory(directory: File): List<String> {
+    private fun collectSoFilesFromDirectory(directory: File): List<SoFileInfo> {
         if (!directory.isDirectory) return emptyList()
 
         return try {
-            val soFiles = mutableListOf<String>()
+            val soMap = mutableMapOf<String, MutableList<String>>()
             val basePathLength = directory.absolutePath.length + 1 // +1 for path separator
 
             directory.walkTopDown()
@@ -177,10 +170,18 @@ abstract class AnalyzeSoTask : DefaultTask() {
                 .forEach { soFile ->
                     val relativePath = soFile.absolutePath.substring(basePathLength)
                         .replace('\\', '/') // 统一路径分隔符
-                    soFiles.add(relativePath)
+                    val parts = relativePath.split('/')
+                    if (parts.size == 2) {
+                        val arch = parts[0]
+                        val fileName = parts[1]
+                        soMap.getOrPut(fileName) { mutableListOf() }.add(arch)
+                    } else {
+                        soMap.getOrPut(relativePath) { mutableListOf() }
+                    }
                 }
-
-            soFiles.sorted() // 保持一致的顺序
+            soMap.entries.sortedBy { it.key }.map { (fileName, archs) ->
+                SoFileInfo(fileName, archs.sorted())
+            }
         } catch (exception: Exception) {
             logger.warn(
                 "Error collecting SO files from directory: ${directory.absolutePath}",
@@ -224,8 +225,15 @@ abstract class AnalyzeSoTask : DefaultTask() {
                 append("    \"soFiles\": [")
                 appendLine()
 
-                module.soFiles.forEachIndexed { soIndex, soFile ->
-                    append("      \"${escapeJsonString(soFile)}\"")
+                module.soFiles.forEachIndexed { soIndex, soFileInfo ->
+                    append("      {")
+                    append("\"fileName\": \"${escapeJsonString(soFileInfo.fileName)}\", ")
+                    append("\"architectures\": [")
+                    soFileInfo.architectures.forEachIndexed { archIndex, arch ->
+                        append("\"${escapeJsonString(arch)}\"")
+                        if (archIndex < soFileInfo.architectures.size - 1) append(", ")
+                    }
+                    append("]}")
                     if (soIndex < module.soFiles.size - 1) append(",")
                     appendLine()
                 }
@@ -264,25 +272,35 @@ abstract class AnalyzeSoTask : DefaultTask() {
      * 记录分析结果统计
      */
     private fun logAnalysisResults(modules: List<ModuleSoInfo>) {
-        val totalSoFiles = modules.sumOf { it.soFiles.size }
+        // 汇总所有 so 文件和架构
+        val totalSoFiles = modules.sumOf { it.soFiles.sumOf { sfi -> sfi.architectures.size } }
+        val totalUniqueSoFiles = modules.sumOf { it.soFiles.size }
 
         logger.lifecycle("=".repeat(50))
         logger.lifecycle("SO Files Analysis Summary")
         logger.lifecycle("=".repeat(50))
         logger.lifecycle("Variant: ${variantName.get()}")
         logger.lifecycle("Modules with SO files: ${modules.size}")
-        logger.lifecycle("Total SO files found: $totalSoFiles")
+        logger.lifecycle("Total SO file entries: $totalSoFiles")
+        logger.lifecycle("Unique SO file names: $totalUniqueSoFiles")
 
         if (modules.isNotEmpty()) {
             logger.lifecycle("")
             logger.lifecycle("Modules breakdown:")
             modules.forEach { module ->
                 logger.lifecycle("  • ${module.moduleName}")
-                logger.lifecycle("    - SO files: ${module.soFiles.size}")
                 logger.lifecycle("    - Path: ${module.modulePath}")
-                if (logger.isInfoEnabled) {
-                    module.soFiles.forEach { soFile ->
-                        logger.info("      - $soFile")
+                if (module.soFiles.isEmpty()) {
+                    logger.lifecycle("    - No SO files found.")
+                } else {
+                    module.soFiles.forEach { soFileInfo ->
+                        logger.lifecycle(
+                            "    - ${soFileInfo.fileName}: [${
+                                soFileInfo.architectures.joinToString(
+                                    ", "
+                                )
+                            }]"
+                        )
                     }
                 }
             }
