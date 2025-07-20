@@ -134,7 +134,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
             }
 
             val moduleName = artifact.id.componentIdentifier.displayName
-            val soFiles = if (artifactFile.isDirectory) {
+            val soFiles: List<SoInfo> = if (artifactFile.isDirectory) {
                 collectSoFilesFromDirectory(artifactFile)
             } else {
                 emptyList()
@@ -160,29 +160,41 @@ abstract class AnalyzeSoTask : DefaultTask() {
     /**
      * 从目录中收集所有 SO 文件
      */
-    private fun collectSoFilesFromDirectory(directory: File): List<SoFileInfo> {
+    private fun collectSoFilesFromDirectory(directory: File): List<SoInfo> {
         if (!directory.isDirectory) return emptyList()
 
         return try {
-            val soMap = mutableMapOf<String, MutableList<String>>()
-            val basePathLength = directory.absolutePath.length + 1 // +1 for path separator
+            // arch -> so详情列表
+            val archMap = mutableMapOf<String, MutableList<SoDetail>>()
+            val soNameSet = mutableSetOf<String>()
+            val basePathLength = directory.absolutePath.length + 1
 
             directory.walkTopDown()
                 .filter { it.isFile && it.name.endsWith(".so") }
                 .forEach { soFile ->
-                    val relativePath = soFile.absolutePath.substring(basePathLength)
-                        .replace('\\', '/') // 统一路径分隔符
+                    val relativePath = soFile.absolutePath.substring(basePathLength).replace('\\', '/')
                     val parts = relativePath.split('/')
                     if (parts.size == 2) {
                         val arch = parts[0]
                         val fileName = parts[1]
-                        soMap.getOrPut(fileName) { mutableListOf() }.add(arch)
-                    } else {
-                        soMap.getOrPut(relativePath) { mutableListOf() }
+                        soNameSet.add(fileName)
+                        val (aligned, alignment, alignmentKb) = checkElfAlignmentWithKb(soFile)
+                        archMap.getOrPut(arch) { mutableListOf() }.add(
+                            SoDetail(
+                                fileName = fileName,
+                                filePath = soFile.absolutePath,
+                                aligned = aligned,
+                                alignment = alignment,
+                                alignmentKb = alignmentKb
+                            )
+                        )
                     }
                 }
-            soMap.entries.sortedBy { it.key }.map { (fileName, archs) ->
-                SoFileInfo(fileName, archs.sorted())
+            // 按so逻辑名聚合
+            soNameSet.sorted().map { soName ->
+                val archMapForSo = archMap.filterValues { list -> list.any { it.fileName == soName } }
+                    .mapValues { (_, list) -> list.filter { it.fileName == soName } }
+                SoInfo(soName, archMapForSo)
             }
         } catch (exception: Exception) {
             logger.warn(
@@ -191,6 +203,38 @@ abstract class AnalyzeSoTask : DefaultTask() {
             )
             emptyList()
         }
+    }
+
+    /**
+     * 检查so文件的ELF段对齐情况，返回(aligned, alignment, alignmentKb)
+     */
+    private fun checkElfAlignmentWithKb(soFile: File): Triple<Boolean, String, Int?> {
+        return try {
+            val process = ProcessBuilder("objdump", "-p", soFile.absolutePath)
+                .redirectErrorStream(true)
+                .start()
+            val output = process.inputStream.bufferedReader().readText()
+            process.waitFor()
+            val loadLine = output.lines().firstOrNull { it.trim().startsWith("LOAD") }
+            val alignment = loadLine?.split(Regex("\\s+"))?.lastOrNull() ?: "unknown"
+            val aligned = Regex("2\\*\\*(1[4-9]|[2-9][0-9]|[1-9][0-9]{2,})").matches(alignment)
+            val alignmentKb = parseAlignmentKb(alignment)
+            Triple(aligned, alignment, alignmentKb)
+        } catch (e: Exception) {
+            Triple(false, "error", null)
+        }
+    }
+
+    /**
+     * 解析如2**14为16KB, 2**12为4KB等
+     */
+    private fun parseAlignmentKb(alignment: String): Int? {
+        val regex = Regex("2\\*\\*(\\d+)")
+        val match = regex.matchEntire(alignment)
+        return if (match != null) {
+            val exp = match.groupValues[1].toIntOrNull()
+            if (exp != null) (1 shl exp) / 1024 else null
+        } else null
     }
 
     /**
@@ -216,7 +260,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
      */
     private fun logAnalysisResults(modules: List<ModuleSoInfo>) {
         // 汇总所有 so 文件和架构
-        val totalSoFiles = modules.sumOf { it.soFiles.sumOf { sfi -> sfi.architectures.size } }
+        val totalSoFiles = modules.sumOf { it.soFiles.sumOf { sfi -> sfi.architectures.values.sumOf { list -> list.size } } }
         val totalUniqueSoFiles = modules.sumOf { it.soFiles.size }
 
         logger.lifecycle("=".repeat(50))
@@ -236,14 +280,17 @@ abstract class AnalyzeSoTask : DefaultTask() {
                 if (module.soFiles.isEmpty()) {
                     logger.lifecycle("    - No SO files found.")
                 } else {
-                    module.soFiles.forEach { soFileInfo ->
-                        logger.lifecycle(
-                            "    - ${soFileInfo.name}: [${
-                                soFileInfo.architectures.joinToString(
-                                    ", "
+                    module.soFiles.forEach { soInfo ->
+                        logger.lifecycle("    - ${soInfo.name}:")
+                        soInfo.architectures.forEach { (arch, details) ->
+                            logger.lifecycle("      [${arch}]:")
+                            details.forEach { detail ->
+                                val pageInfo = detail.alignmentKb?.let { " | page size: ${it}KB" } ?: ""
+                                logger.lifecycle(
+                                    "        ${detail.fileName} | aligned: ${detail.aligned} | alignment: ${detail.alignment}${pageInfo}"
                                 )
-                            }]"
-                        )
+                            }
+                        }
                     }
                 }
             }
