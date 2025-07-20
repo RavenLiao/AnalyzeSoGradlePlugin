@@ -12,26 +12,39 @@ Other Language：[English](README.md)
 
 ### 已实现
 - 输出 so 库的来源和架构信息
+- 16KB 内存页大小检测，方便适配 Android 15 的要求([支持 16 KB 的页面大小](https://developer.android.google.cn/guide/practices/page-sizes?hl=zh-cn))
+- 美观的 HTML 报告输出，一键筛出没有兼容Android 15的原生库及其来源。
 
 ### 待实现
-- 支持 16KB 内存页大小检测, 方便适配Android 15的要求([支持 16 KB 的页面大小](https://developer.android.google.cn/guide/practices/page-sizes?hl=zh-cn))
-- 更优美的输出 UI
+- 添加聚合所有变体的任务，并生成合并的 HTML 报告
 - 欢迎提出问题或建议！
 
 ## 快速开始
-
-本插件已发布至 Maven Central 仓库： [![Download][version_icon]][version_link] (excluding 'v')
-
 **Gradle 插件引入方式：**
+
+本插件已发布至 Maven Central 仓库：
+
+ ${LAST_VERSION}: [![Download][version_icon]][version_link] (去掉'v')
 
 在 `build.gradle` 中应用插件：
 
 ```kotlin
 plugins {
-    id("io.github.ravenliao.analyze-so") version "0.0.1"
+    id("io.github.ravenliao.analyze-so") version "$LAST_VERSION"
 }
 ```
 
+## 使用方法
+
+应用插件后，Gradle 会为每个构建变体自动生成对应的分析任务：
+
+```bash
+# 分析特定变体的 so 文件
+./gradlew analyze[VariantName]So
+
+# 例如，分析 debug 变体
+./gradlew analyzeDebugSo
+```
 
 ## 特别感谢
 

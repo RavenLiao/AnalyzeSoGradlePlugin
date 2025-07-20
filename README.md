@@ -12,24 +12,38 @@ Other Language: [中文](README_zh.md)
 
 ### Implemented
 - Output the source and architecture information of so libraries
+- Detect 16KB memory page size to help adapt to Android 15 requirements([Support 16 KB page sizes](https://developer.android.com/guide/practices/page-sizes))
+- Beautiful HTML report output to quickly identify native libraries that are not compatible with Android 15 and their sources
 
 ### Planned
-- Support for detecting 16KB memory page size to help adapt to Android 15 requirements([Support 16 KB page sizes](https://developer.android.com/guide/practices/page-sizes))
-- More elegant output UI
+- Add task to aggregate all variants and generate a combined HTML report
 - Issues and suggestions are welcome!
 
 ## Quick Start
-
-This plugin is published on Maven Central: [![Download][version_icon]][version_link] (excluding 'v')
-
 **How to apply the Gradle plugin:**
+
+This plugin is published on Maven Central:
+
+${LAST_VERSION}: [![Download][version_icon]][version_link] (excluding 'v')
 
 In your `build.gradle` file:
 
 ```kotlin
 plugins {
-    id("io.github.ravenliao.analyze-so") version "0.0.1"
+    id("io.github.ravenliao.analyze-so") version "$LAST_VERSION"
 }
+```
+
+## Usage
+
+After applying the plugin, Gradle will automatically generate analysis tasks for each build variant:
+
+```bash
+# Analyze so files for a specific variant
+./gradlew analyze[VariantName]So
+
+# For example, analyze debug variant
+./gradlew analyzeDebugSo
 ```
 
 ## Special Thanks
