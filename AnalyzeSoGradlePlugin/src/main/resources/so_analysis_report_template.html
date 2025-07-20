@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Android SO Library Page Size Compatibility Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+        .container { max-width: 1200px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px; }
+        h1 { text-align: center; color: #333; }
+        .module-card { margin-bottom: 36px; border: 1px solid #ececec; border-radius: 8px; padding: 24px; background: #fafbfc; }
+        .module-title { font-size: 1.2em; margin-bottom: 16px; color: #2a5d8f; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: center; }
+        th { background: #e9f3fb; color: #2a5d8f; }
+        td.missing { background: #f3f3f3; color: #bbb; font-style: italic; }
+        td.pass { background: #e6fae6; color: #2b7a0b; font-weight: bold; }
+        td.warn { background: #fff3cd; color: #856404; font-weight: bold; }
+        td.normal { background: #f9f9f9; color: #333; }
+        .filter-bar { margin-bottom: 32px; text-align: right; }
+        .filter-btn { padding: 6px 18px; border: none; border-radius: 4px; background: #2a5d8f; color: #fff; cursor: pointer; margin-left: 10px; font-size: 1em; transition: background 0.2s; }
+        .filter-btn.active, .filter-btn:hover { background: #19507a; }
+        .hidden { display: none; }
+        td .emoji { font-size: 1.2em; vertical-align: middle; }
+        td[title] { cursor: help; }
+        @media (max-width: 800px) {
+            .container { padding: 8px; }
+            .module-card { padding: 10px; }
+            th, td { padding: 4px 6px; font-size: 0.98em; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Android SO Library Page Size Compatibility Report</h1>
+    <div class="filter-bar">
+        <a href="https://developer.android.com/guide/practices/page-sizes" target="_blank" style="font-size:0.98em;text-decoration:underline;color:#2a5d8f;">Android Page Size Guide</a>
+        <button class="filter-btn active" id="showAll">All Dependencies</button>
+        <button class="filter-btn" id="showNonCompliant">Show Only Non-compliant</button>
+    </div>
+    <div id="report-root"></div>
+    <!-- Footer legend removed as requested -->
+</div>
+<script>
+// The following placeholder will be replaced by the Gradle task:
+// __SO_ANALYSIS_JSON_DATA__
+const soAnalysisData = __SO_ANALYSIS_JSON_DATA__;
+
+// 动态获取所有架构，优先顺序：64位（arm64-v8a, x86_64），再32位（armeabi-v7a, x86），arm优先于x86，其余架构按首次出现顺序追加
+function getSortedArchs(module) {
+    const archSet = new Set();
+    module.soFiles.forEach(so => {
+        Object.keys(so.architectures||{}).forEach(arch => archSet.add(arch));
+    });
+    const archOrder = ["arm64-v8a", "x86_64", "armeabi-v7a", "x86"];
+    const archs = Array.from(archSet);
+    const sorted = [];
+    archOrder.forEach(a => { if (archSet.has(a)) sorted.push(a); });
+    archs.forEach(a => { if (!archOrder.includes(a)) sorted.push(a); });
+    return sorted;
+}
+
+function isCompliant(arch, info) {
+    if (!info) return false;
+    if ((arch === "arm64-v8a" || arch === "x86_64")) {
+        return info.alignmentKb === 16 && info.aligned;
+    }
+    return true;
+}
+function isWarning(arch, info) {
+    if (!info) return false;
+    if ((arch === "arm64-v8a" || arch === "x86_64")) {
+        return !(info.alignmentKb === 16 && info.aligned);
+    }
+    return false;
+}
+function hasNonCompliant(module) {
+    const archs = getSortedArchs(module);
+    for (const so of module.soFiles) {
+        for (const arch of archs) {
+            const arr = (so.architectures||{})[arch];
+            if (!arr || arr.length === 0) continue;
+            const info = arr[0];
+            if ((arch === "arm64-v8a" || arch === "x86_64") && !(info.alignmentKb === 16 && info.aligned)) return true;
+        }
+    }
+    return false;
+}
+function renderReport() {
+    const root = document.getElementById('report-root');
+    root.innerHTML = '';
+    const showNonCompliant = document.getElementById('showNonCompliant').classList.contains('active');
+    soAnalysisData.forEach(module => {
+        if (showNonCompliant && !hasNonCompliant(module)) return;
+        const card = document.createElement('div');
+        card.className = 'module-card';
+        card.innerHTML = `<div class="module-title">Dependency: ${module.moduleName}</div>`;
+        // 动态表头
+        const archs = getSortedArchs(module);
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = `<tr><th>SO Library</th>${archs.map(a=>`<th>${a}</th>`).join('')}</tr>`;
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        module.soFiles.forEach(so => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${so.name}</td>`;
+            archs.forEach(arch => {
+                const arr = (so.architectures||{})[arch];
+                if (!arr || arr.length === 0) {
+                    tr.innerHTML += '<td class="missing" title="Not present for this architecture"><span class="emoji">/</span></td>';
+                } else {
+                    const info = arr[0];
+                    let cellClass = 'normal';
+                    let cellHtml = info.alignmentKb + 'KB';
+                    let tooltip = `${info.alignmentKb}KB page size`;
+                    if ((arch === "arm64-v8a" || arch === "x86_64")) {
+                        if (info.alignmentKb === 16 && info.aligned) {
+                            cellClass = 'pass';
+                            cellHtml = `<span class="emoji" title="Compatible with 16 KB devices.">🟢</span> ` + cellHtml;
+                            tooltip = 'Compatible with 16 KB devices.';
+                        } else {
+                            cellClass = 'warn';
+                            cellHtml = `<span class="emoji" title="Not compatible with 16 KB devices. LOAD segment not aligned at 16 KB boundary.">⚠️</span> ` + cellHtml;
+                            tooltip = 'Not compatible with 16 KB devices. LOAD segment not aligned at 16 KB boundary.';
+                        }
+                    }
+                    tr.innerHTML += `<td class="${cellClass}" title="${tooltip}">${cellHtml}</td>`;
+                }
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        card.appendChild(table);
+        root.appendChild(card);
+    });
+}
+document.getElementById('showAll').onclick = function() {
+    this.classList.add('active');
+    document.getElementById('showNonCompliant').classList.remove('active');
+    renderReport();
+};
+document.getElementById('showNonCompliant').onclick = function() {
+    this.classList.add('active');
+    document.getElementById('showAll').classList.remove('active');
+    renderReport();
+};
+renderReport();
+</script>
+</body>
+</html>
