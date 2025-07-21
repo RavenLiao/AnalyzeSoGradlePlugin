@@ -8,6 +8,7 @@ gsyvideoplayer = "11.0.0"
 kotlin = "1.9.22"
 kotlinxSerializationJson = "1.6.3"
 mmkv = "1.3.14"
+onepass = "1.7.0.1"
 mavenpublish = "0.29.0"
 
 [libraries]
@@ -15,6 +16,7 @@ android-build = { group = "com.android.tools.build", name = "gradle", version.re
 gsyvideoplayer = { module = "io.github.carguo:gsyvideoplayer", version.ref = "gsyvideoplayer" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 mmkv = { module = "com.tencent:mmkv", version.ref = "mmkv" }
+onepass = { module = "io.github.yidun:onePass", version.ref = "onepass" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

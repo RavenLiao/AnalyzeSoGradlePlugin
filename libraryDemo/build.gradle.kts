@@ -41,4 +41,5 @@ android {
 
 dependencies {
     implementation(libs.gsyvideoplayer)
+    implementation(libs.onepass)
 }
