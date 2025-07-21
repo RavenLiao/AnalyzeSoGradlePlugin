@@ -63,14 +63,14 @@ function getSortedArchs(module) {
 function isCompliant(arch, info) {
     if (!info) return false;
     if ((arch === "arm64-v8a" || arch === "x86_64")) {
-        return info.alignmentKb === 16 && info.aligned;
+        return info.alignmentKb >= 16 && info.aligned;
     }
     return true;
 }
 function isWarning(arch, info) {
     if (!info) return false;
     if ((arch === "arm64-v8a" || arch === "x86_64")) {
-        return !(info.alignmentKb === 16 && info.aligned);
+        return !(info.alignmentKb >= 16 && info.aligned);
     }
     return false;
 }
@@ -81,7 +81,7 @@ function hasNonCompliant(module) {
             const arr = (so.architectures||{})[arch];
             if (!arr || arr.length === 0) continue;
             const info = arr[0];
-            if ((arch === "arm64-v8a" || arch === "x86_64") && !(info.alignmentKb === 16 && info.aligned)) return true;
+            if ((arch === "arm64-v8a" || arch === "x86_64") && !(info.alignmentKb >= 16 && info.aligned)) return true;
         }
     }
     return false;
