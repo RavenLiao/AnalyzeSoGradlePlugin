@@ -4,6 +4,25 @@ plugins {
     alias(libs.plugins.mavenpublish)
 }
 
+// Configure Java toolchain to use Java 11 for broader compatibility
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+// Ensure the Gradle daemon uses the same Java version
+tasks.withType<JavaCompile>().configureEach {
+    sourceCompatibility = JavaVersion.VERSION_11.toString()
+    targetCompatibility = JavaVersion.VERSION_11.toString()
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+}
+
 repositories {
     google()
     mavenCentral()
