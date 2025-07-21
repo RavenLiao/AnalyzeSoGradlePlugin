@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
+
 plugins {
     `kotlin-dsl`
     alias(libs.plugins.serialization.plugin)
@@ -17,11 +19,7 @@ tasks.withType<JavaCompile>().configureEach {
     targetCompatibility = JavaVersion.VERSION_11.toString()
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-}
+kotlinExtension.jvmToolchain(11)
 
 repositories {
     google()
