@@ -3,7 +3,7 @@ compileSdk = "33"
 targetSdk = "33"
 minSdk = "21"
 
-agp = "7.3.0"
+agp = "8.6.1"
 gsyvideoplayer = "11.0.0"
 kotlin = "1.9.22"
 kotlinxSerializationJson = "1.6.3"
