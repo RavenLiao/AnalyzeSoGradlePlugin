@@ -115,7 +115,7 @@ function renderReport() {
                     let cellHtml = info.alignmentKb + 'KB';
                     let tooltip = `${info.alignmentKb}KB page size`;
                     if ((arch === "arm64-v8a" || arch === "x86_64")) {
-                        if (info.alignmentKb === 16 && info.aligned) {
+                        if (isCompliant(arch, info)) {
                             cellClass = 'pass';
                             cellHtml = `<span class="emoji" title="Compatible with 16 KB devices.">🟢</span> ` + cellHtml;
                             tooltip = 'Compatible with 16 KB devices.';
