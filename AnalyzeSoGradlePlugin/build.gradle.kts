@@ -28,7 +28,7 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.android.build)
+    compileOnly(libs.android.build)
     implementation(libs.kotlinx.serialization.json)
 }
 
