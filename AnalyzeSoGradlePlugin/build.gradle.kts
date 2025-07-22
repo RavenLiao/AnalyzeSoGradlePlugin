@@ -38,7 +38,7 @@ gradlePlugin {
             group = "io.github.ravenliao"
             id = "${group}.analyze-so"
             implementationClass = "io.github.ravenliao.plugin.AnalyzeSoGradlePlugin"
-            version = "0.0.4"
+            version = "0.0.5"
         }
     }
 }
