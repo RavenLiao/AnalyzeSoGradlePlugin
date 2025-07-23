@@ -17,6 +17,7 @@ Other Language：[English](README.md)
 
 ### 待实现
 - 添加聚合所有变体的任务，并生成合并的 HTML 报告
+- 集成 [LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules) 规则库，在 HTML 报告中提供更详细的库信息
 - 欢迎提出问题或建议！
 
 ## 快速开始
@@ -44,6 +45,16 @@ plugins {
 
 # 例如，分析 debug 变体
 ./gradlew analyzeDebugSo
+```
+
+分析完成后，任务输出的末尾会显示详细的 HTML 报告路径。报告通常位于：
+```
+app/build/reports/analyze-so/[VariantName]/analyze-so-report.html
+```
+
+例如，对于 debug 变体，报告将位于：
+```
+app/build/reports/analyze-so/Debug/analyze-so-report.html
 ```
 
 ## 特别感谢

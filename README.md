@@ -17,6 +17,7 @@ Other Language: [中文](README_zh.md)
 
 ### Planned
 - Add task to aggregate all variants and generate a combined HTML report
+- Integrate with [LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules) database to provide more detailed library information in the HTML report
 - Issues and suggestions are welcome!
 
 ## Quick Start
@@ -44,6 +45,16 @@ After applying the plugin, Gradle will automatically generate analysis tasks for
 
 # For example, analyze debug variant
 ./gradlew analyzeDebugSo
+```
+
+After running the analysis, the path to the detailed HTML report will be shown at the end of the task output. The report is typically located at:
+```
+app/build/reports/analyze-so/[VariantName]/analyze-so-report.html
+```
+
+For example, for the debug variant, the report will be at:
+```
+app/build/reports/analyze-so/Debug/analyze-so-report.html
 ```
 
 ## Special Thanks
