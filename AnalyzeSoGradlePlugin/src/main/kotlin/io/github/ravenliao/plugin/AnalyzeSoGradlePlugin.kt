@@ -12,6 +12,15 @@ class AnalyzeSoGradlePlugin : Plugin<Project> {
     override fun apply(project: Project) {
         // 检测项目类型并应用相应的配置
         configureProject(project)
+        // 注册聚合报告任务
+        project.afterEvaluate {
+            val analyzeTasks = project.tasks.matching { it.name.startsWith("analyze") && it.name.endsWith("So") && it.name != "analyzeSo" }
+            project.tasks.register("analyzeSo", AggregateAnalyzeSoTask::class.java) {
+                group = "analyze-so"
+                description = "Aggregate SO analysis reports for all variants and generate a tabbed HTML report."
+                dependsOn(analyzeTasks)
+            }
+        }
     }
 
     private fun configureProject(project: Project) {

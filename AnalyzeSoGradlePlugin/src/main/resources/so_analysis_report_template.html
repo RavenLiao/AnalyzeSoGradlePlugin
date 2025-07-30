@@ -433,9 +433,77 @@
     </div>
 </div>
 <script>
-// The following placeholder will be replaced by the Gradle task:
 // __SO_ANALYSIS_JSON_DATA__
-const soAnalysisData = __SO_ANALYSIS_JSON_DATA__;
+// 支持多变体聚合和单变体自适应
+let allVariantsData = null;
+let soAnalysisData = null;
+let currentVariant = null;
+
+// 由Kotlin端插入allVariantsData变量（如有）
+if (typeof ALL_VARIANTS_DATA_PLACEHOLDER !== 'undefined') {
+    allVariantsData = ALL_VARIANTS_DATA_PLACEHOLDER;
+    const keys = Object.keys(allVariantsData);
+    if (keys.length === 1) {
+        // 单变体，直接用
+        soAnalysisData = JSON.parse(allVariantsData[keys[0]]);
+        currentVariant = keys[0];
+    } else {
+        // 多变体，默认第一个
+        soAnalysisData = JSON.parse(allVariantsData[keys[0]]);
+        currentVariant = keys[0];
+    }
+} else {
+    // 兼容老模式
+    soAnalysisData = __SO_ANALYSIS_JSON_DATA__;
+}
+
+function renderTabsIfNeeded() {
+    const tabBarId = 'variantTabsBar';
+    let tabBar = document.getElementById(tabBarId);
+    if (tabBar) tabBar.remove();
+    if (allVariantsData && Object.keys(allVariantsData).length > 1) {
+        // 多变体，渲染Tab栏
+        const keys = Object.keys(allVariantsData);
+        const bar = document.createElement('div');
+        bar.id = tabBarId;
+        bar.style.marginBottom = '24px';
+        let ul = document.createElement('ul');
+        ul.style.display = 'flex';
+        ul.style.gap = '12px';
+        ul.style.listStyle = 'none';
+        ul.style.padding = '0';
+        keys.forEach((variant, idx) => {
+            let li = document.createElement('li');
+            let btn = document.createElement('button');
+            btn.className = 'filter-btn';
+            btn.id = 'tabBtn_' + variant;
+            btn.textContent = variant;
+            if (idx === 0) {
+                btn.style.background = 'linear-gradient(135deg,#4361ee,#4895ef)';
+                btn.style.color = 'white';
+            }
+            btn.onclick = function() {
+                currentVariant = variant;
+                keys.forEach(v => {
+                    const b = document.getElementById('tabBtn_' + v);
+                    if (b) {
+                        b.style.background = '';
+                        b.style.color = '';
+                    }
+                });
+                btn.style.background = 'linear-gradient(135deg,#4361ee,#4895ef)';
+                btn.style.color = 'white';
+                soAnalysisData = JSON.parse(allVariantsData[variant]);
+                renderReport();
+            };
+            li.appendChild(btn);
+            ul.appendChild(li);
+        });
+        bar.appendChild(ul);
+        const container = document.querySelector('.container');
+        container.insertBefore(bar, document.getElementById('report-root'));
+    }
+}
 
 // LibChecker-Rules API URLs
 const GITHUB_ROOT_URL = "https://raw.githubusercontent.com/LibChecker/LibChecker-Rules/v4/";
@@ -863,7 +931,8 @@ document.addEventListener('keydown', function(event) {
 
 // 初始化UI语言
 updateUILanguage();
-
+// 渲染Tab栏（如有）
+renderTabsIfNeeded();
 // 初始化报告
 renderReport();
 
