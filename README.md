@@ -14,10 +14,10 @@ Other Language: [中文](README_zh.md)
 - Output the source and architecture information of so libraries
 - Detect 16KB memory page size to help adapt to Android 15 requirements([Support 16 KB page sizes](https://developer.android.com/guide/practices/page-sizes))
 - Beautiful HTML report output to quickly identify native libraries that are not compatible with Android 15 and their sources
-
-### Planned
 - Add task to aggregate all variants and generate a combined HTML report
 - Integrate with [LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules) database to provide more detailed library information in the HTML report
+
+### Planned
 - Issues and suggestions are welcome!
 
 ## Quick Start
@@ -45,6 +45,9 @@ After applying the plugin, Gradle will automatically generate analysis tasks for
 
 # For example, analyze debug variant
 ./gradlew analyzeDebugSo
+
+# Analyze so files for all variant
+./gradlew analyzeSo
 ```
 
 After running the analysis, the path to the detailed HTML report will be shown at the end of the task output. The report is typically located at:
@@ -60,6 +63,7 @@ app/build/reports/analyze-so/Debug/analyze-so-report.html
 ## Special Thanks
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): This project references its implementation ideas
+- [LibChecker/LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules): Thank for so info database
 
 ## License
 

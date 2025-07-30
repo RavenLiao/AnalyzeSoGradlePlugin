@@ -14,10 +14,10 @@ Other Language：[English](README.md)
 - 输出 so 库的来源和架构信息
 - 16KB 内存页大小检测，方便适配 Android 15 的要求([支持 16 KB 的页面大小](https://developer.android.google.cn/guide/practices/page-sizes?hl=zh-cn))
 - 美观的 HTML 报告输出，一键筛出没有兼容Android 15的原生库及其来源。
-
-### 待实现
 - 添加聚合所有变体的任务，并生成合并的 HTML 报告
 - 集成 [LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules) 规则库，在 HTML 报告中提供更详细的库信息
+
+### 待实现
 - 欢迎提出问题或建议！
 
 ## 快速开始
@@ -45,6 +45,9 @@ plugins {
 
 # 例如，分析 debug 变体
 ./gradlew analyzeDebugSo
+
+# 分析所有变体的 so 文件
+./gradlew analyzeSo
 ```
 
 分析完成后，任务输出的末尾会显示详细的 HTML 报告路径。报告通常位于：
@@ -60,6 +63,7 @@ app/build/reports/analyze-so/Debug/analyze-so-report.html
 ## 特别感谢
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): 本项目参考了其实现思路
+- [LibChecker/LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules): 感谢提供了so库数据库
 
 ## License
 
