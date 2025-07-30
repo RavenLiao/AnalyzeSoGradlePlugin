@@ -5,46 +5,513 @@
     <title>Android SO Library Page Size Compatibility Report</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
-        .container { max-width: 1200px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px; }
-        h1 { text-align: center; color: #333; }
-        .module-card { margin-bottom: 36px; border: 1px solid #ececec; border-radius: 8px; padding: 24px; background: #fafbfc; }
-        .module-title { font-size: 1.2em; margin-bottom: 16px; color: #2a5d8f; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
-        th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: center; }
-        th { background: #e9f3fb; color: #2a5d8f; }
-        td.missing { background: #f3f3f3; color: #bbb; font-style: italic; }
-        td.pass { background: #e6fae6; color: #2b7a0b; font-weight: bold; }
-        td.warn { background: #fff3cd; color: #856404; font-weight: bold; }
-        td.normal { background: #f9f9f9; color: #333; }
-        .filter-bar { margin-bottom: 32px; text-align: right; }
-        .filter-btn { padding: 6px 18px; border: none; border-radius: 4px; background: #2a5d8f; color: #fff; cursor: pointer; margin-left: 10px; font-size: 1em; transition: background 0.2s; }
-        .filter-btn.active, .filter-btn:hover { background: #19507a; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary-color: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a0ca3;
+            --success-color: #4cc9f0;
+            --warning-color: #f72585;
+            --text-primary: #2b2d42;
+            --text-secondary: #8d99ae;
+            --bg-light: #f8f9fa;
+            --bg-card: #ffffff;
+            --border-color: #edf2f4;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --transition: all 0.3s ease;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; 
+            background: var(--bg-light); 
+            color: var(--text-primary);
+            margin: 0; 
+            padding: 0; 
+            line-height: 1.6;
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 40px auto; 
+            background: var(--bg-card); 
+            border-radius: var(--radius-lg); 
+            box-shadow: var(--shadow-md); 
+            padding: 32px; 
+            transition: var(--transition);
+        }
+        
+        h1 { 
+            text-align: center; 
+            color: var(--text-primary); 
+            font-weight: 700;
+            margin-bottom: 24px;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .module-card { 
+            margin-bottom: 36px; 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--radius-md); 
+            padding: 28px; 
+            background: var(--bg-card); 
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+        
+        .module-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .module-title { 
+            font-size: 1.3em; 
+            margin-bottom: 20px; 
+            color: var(--primary-color); 
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        
+        table { 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            width: 100%; 
+            margin-bottom: 16px; 
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        th, td { 
+            padding: 12px 16px; 
+            text-align: center; 
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        th { 
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); 
+            color: white; 
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        td.missing { 
+            background: #f7f7f9; 
+            color: var(--text-secondary); 
+            font-style: italic; 
+        }
+        
+        td.pass { 
+            background: rgba(76, 201, 240, 0.1); 
+            color: var(--success-color); 
+            font-weight: 600; 
+        }
+        
+        td.warn { 
+            background: rgba(247, 37, 133, 0.1); 
+            color: var(--warning-color); 
+            font-weight: 600; 
+        }
+        
+        td.normal { 
+            background: var(--bg-card); 
+            color: var(--text-primary); 
+        }
+        
+        .filter-bar { 
+            margin-bottom: 32px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        
+        .filter-btn { 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: var(--radius-sm); 
+            background: var(--bg-light); 
+            color: var(--text-primary); 
+            cursor: pointer; 
+            font-size: 0.95em; 
+            font-weight: 500;
+            transition: var(--transition); 
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+        }
+        
+        .filter-btn.active { 
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); 
+            color: white; 
+            border-color: transparent;
+        }
+        
+        .filter-btn:hover:not(.active) { 
+            background: var(--border-color); 
+            transform: translateY(-2px);
+        }
+        
         .hidden { display: none; }
-        td .emoji { font-size: 1.2em; vertical-align: middle; }
-        td[title] { cursor: help; }
+        
+        td .emoji { 
+            font-size: 1.2em; 
+            vertical-align: middle; 
+            margin-right: 4px;
+        }
+        
+        td[title] { 
+            cursor: help; 
+            position: relative;
+        }
+        
+        .lib-info-icon { 
+            cursor: pointer; 
+            margin-left: 8px; 
+            font-size: 1em; 
+            color: var(--primary-color);
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(67, 97, 238, 0.1);
+        }
+        
+        .lib-info-icon:hover {
+            background: rgba(67, 97, 238, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal.show {
+            opacity: 1;
+        }
+        
+        .modal-content { 
+            background-color: var(--bg-card); 
+            margin: 10% auto; 
+            padding: 28px; 
+            border: none; 
+            border-radius: var(--radius-md); 
+            width: 90%; 
+            max-width: 600px; 
+            box-shadow: var(--shadow-lg); 
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.show .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .close-modal { 
+            color: var(--text-secondary); 
+            float: right; 
+            font-size: 28px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: var(--transition);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .close-modal:hover { 
+            color: var(--text-primary); 
+            background: var(--border-color);
+        }
+        
+        .lib-info-title { 
+            font-weight: 700; 
+            color: var(--primary-color); 
+            margin-bottom: 16px; 
+            font-size: 1.4em; 
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+        
+        .lib-info-content { 
+            margin-bottom: 16px; 
+            line-height: 1.6; 
+            color: var(--text-primary);
+        }
+        
+        .lib-info-link { 
+            color: var(--primary-color); 
+            text-decoration: none; 
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: var(--radius-sm);
+            margin-top: 8px;
+        }
+        
+        .lib-info-link:hover { 
+            text-decoration: none; 
+            background: rgba(67, 97, 238, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .lib-info-loading { 
+            color: var(--text-secondary); 
+            font-style: italic; 
+            text-align: center; 
+            padding: 32px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(67, 97, 238, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .lib-info-error { 
+            color: var(--warning-color); 
+            text-align: center; 
+            padding: 32px; 
+            background: rgba(247, 37, 133, 0.05);
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+        }
+        
+        .footer { 
+            margin-top: 60px; 
+            padding-top: 24px; 
+            border-top: 2px solid var(--border-color); 
+            font-size: 0.95em; 
+            color: var(--text-secondary); 
+            text-align: center; 
+        }
+        
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        #pageGuideLink {
+            font-size: 0.95em;
+            text-decoration: none;
+            color: var(--primary-color);
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: var(--radius-sm);
+        }
+        
+        #pageGuideLink:hover {
+            background: rgba(67, 97, 238, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        #toggleLanguage {
+            background: linear-gradient(135deg, #f72585, #4361ee);
+            color: white;
+            font-weight: 500;
+        }
+        
+        #toggleLanguage:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
         @media (max-width: 800px) {
-            .container { padding: 8px; }
-            .module-card { padding: 10px; }
-            th, td { padding: 4px 6px; font-size: 0.98em; }
+            .container { 
+                padding: 16px; 
+                margin: 20px auto;
+            }
+            .module-card { 
+                padding: 16px; 
+            }
+            th, td { 
+                padding: 8px 10px; 
+                font-size: 0.9em; 
+            }
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Android SO Library Page Size Compatibility Report</h1>
+    <h1 id="reportTitle">Android SO Library Page Size Compatibility Report</h1>
     <div class="filter-bar">
-        <a href="https://developer.android.com/guide/practices/page-sizes" target="_blank" style="font-size:0.98em;text-decoration:underline;color:#2a5d8f;">Android Page Size Guide</a>
+        <a href="https://developer.android.com/guide/practices/page-sizes" target="_blank" style="font-size:0.98em;text-decoration:underline;color:#2a5d8f;" id="pageGuideLink">Android Page Size Guide</a>
         <button class="filter-btn active" id="showAll">All Dependencies</button>
         <button class="filter-btn" id="showNonCompliant">Show Only Non-compliant</button>
+        <button class="filter-btn" id="toggleLanguage">中/EN</button>
     </div>
     <div id="report-root"></div>
-    <!-- Footer legend removed as requested -->
+    <div class="footer" id="footerInfo">
+        <p>SO库详细信息由 <a href="https://github.com/LibChecker/LibChecker-Rules" target="_blank">LibChecker-Rules</a> 开源项目提供。</p>
+        <p>点击库名称旁边的 ℹ️ 图标可查看详细信息。</p>
+    </div>
+</div>
+
+<!-- 模态窗口 -->
+<div id="libInfoModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div id="modalContent"></div>
+    </div>
 </div>
 <script>
 // The following placeholder will be replaced by the Gradle task:
 // __SO_ANALYSIS_JSON_DATA__
 const soAnalysisData = __SO_ANALYSIS_JSON_DATA__;
+
+// LibChecker-Rules API URLs
+const GITHUB_ROOT_URL = "https://raw.githubusercontent.com/LibChecker/LibChecker-Rules/v4/";
+const GITLAB_ROOT_URL = "https://gitlab.com/zhaobozhen/LibChecker-Rules/-/raw/v4/";
+const CATEGORY_DIR = "native-libs";
+
+// Cache for library information to avoid redundant requests
+const libInfoCache = {};
+
+// Flag to control library info visibility
+let showLibInfo = false;
+
+// 检测用户浏览器语言
+function getUserLanguage() {
+    const userLang = navigator.language || navigator.userLanguage;
+    return userLang.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+}
+
+// 当前语言
+let currentLanguage = getUserLanguage();
+
+// 多语言翻译
+const translations = {
+    'zh': {
+        reportTitle: 'Android SO库页面大小兼容性报告',
+        allDependencies: '所有依赖',
+        showNonCompliant: '仅显示不兼容项',
+        toggleLanguage: '中/EN',
+        notPresent: '此架构不存在',
+        compatible: '兼容16KB设备',
+        notCompatible: '不兼容16KB设备。LOAD段未在16KB边界对齐',
+        viewLibInfo: '查看库详情',
+        loading: '正在加载 {0} 的信息...',
+        noLibInfo: '没有可用的库信息',
+        devTeam: '开发团队',
+        sourceLink: '源码链接',
+        ruleContributors: '规则贡献者',
+        error: '错误',
+        loadFailed: '加载库信息失败',
+        footerInfo1: 'SO库详细信息由 <a href="https://github.com/LibChecker/LibChecker-Rules" target="_blank">LibChecker-Rules</a> 开源项目提供。',
+        footerInfo2: '点击库名称旁边的 ℹ️ 图标可查看详细信息。',
+        pageGuide: 'Android 页面大小指南',
+        dependency: '依赖: ',
+        soLibrary: 'SO库',
+        pageSize: '页面大小',
+        corsError: '检测到CORS错误。由于跨域限制，库信息可能无法获取。',
+        libInfoFor: '{0}的库信息:',
+        failedToGetLibInfo: '获取{0}的库信息失败:'
+    },
+    'en': {
+        reportTitle: 'Android SO Library Page Size Compatibility Report',
+        allDependencies: 'All Dependencies',
+        showNonCompliant: 'Show Only Non-compliant',
+        toggleLanguage: '中/EN',
+        notPresent: 'Not present for this architecture',
+        compatible: 'Compatible with 16 KB devices',
+        notCompatible: 'Not compatible with 16 KB devices. LOAD segment not aligned at 16 KB boundary',
+        viewLibInfo: 'View library details',
+        loading: 'Loading information for {0}...',
+        noLibInfo: 'No library information available',
+        devTeam: 'Development Team',
+        sourceLink: 'Source Link',
+        ruleContributors: 'Rule Contributors',
+        error: 'Error',
+        loadFailed: 'Failed to load library information',
+        footerInfo1: 'SO library information provided by <a href="https://github.com/LibChecker/LibChecker-Rules" target="_blank">LibChecker-Rules</a> open source project.',
+        footerInfo2: 'Click the ℹ️ icon next to the library name to view details.',
+        pageGuide: 'Android Page Size Guide',
+        dependency: 'Dependency: ',
+        soLibrary: 'SO Library',
+        pageSize: 'page size',
+        corsError: 'CORS error detected. Library information might not be available due to cross-origin restrictions.',
+        libInfoFor: 'Library information for {0}:',
+        failedToGetLibInfo: 'Failed to get library information for {0}:'
+    }
+};
 
 // 动态获取所有架构，优先顺序：64位（arm64-v8a, x86_64），再32位（armeabi-v7a, x86），arm优先于x86，其余架构按首次出现顺序追加
 function getSortedArchs(module) {
@@ -86,53 +553,256 @@ function hasNonCompliant(module) {
     }
     return false;
 }
+// 从LibChecker-Rules获取库信息的函数
+async function fetchLibraryInfo(libName) {
+    // 如果已经缓存了该库的信息，直接返回
+    if (libInfoCache[libName]) {
+        return libInfoCache[libName];
+    }
+    
+    // 移除.so后缀以匹配LibChecker-Rules的命名规则
+    const cleanLibName = libName.replace(/\.so$/, "");
+    
+    try {
+        // 首先尝试从GitHub获取
+        const response = await fetch(`${GITHUB_ROOT_URL}${CATEGORY_DIR}/${cleanLibName}.so.json`);
+        
+        // 如果GitHub请求失败，尝试从GitLab获取
+        if (!response.ok) {
+            const gitlabResponse = await fetch(`${GITLAB_ROOT_URL}${CATEGORY_DIR}/${cleanLibName}.so.json`);
+            if (!gitlabResponse.ok) {
+                throw new Error(`Failed to fetch library info from both GitHub and GitLab`);
+            }
+            const data = await gitlabResponse.json();
+            libInfoCache[libName] = data;
+            return data;
+        }
+        
+        const data = await response.json();
+        libInfoCache[libName] = data;
+        return data;
+    } catch (error) {
+        console.error(`Error fetching library info for ${libName}:`, error);
+        libInfoCache[libName] = { error: true, message: error.message };
+        return { error: true, message: error.message };
+    }
+}
+
+// 显示模态窗口的函数
+function showLibInfoModal(libName) {
+    const modal = document.getElementById('libInfoModal');
+    const modalContent = document.getElementById('modalContent');
+    
+    // 显示加载中，添加加载动画
+    modalContent.innerHTML = `
+        <div class="lib-info-loading">
+            <div class="loading-spinner"></div>
+            ${translations[currentLanguage].loading.replace('{0}', libName)}
+        </div>
+    `;
+    
+    // 显示模态窗口并添加动画效果
+    modal.style.display = 'block';
+    // 触发重绘以应用过渡效果
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+    
+    // 获取库信息
+    fetchLibraryInfo(libName).then(info => {
+        if (info.error) {
+            modalContent.innerHTML = `<div class="lib-info-error">${translations[currentLanguage].loadFailed}: ${info.message}</div>`;
+            return;
+        }
+        
+        // 获取中文和英文数据
+        const zhData = info.data?.find(item => item.locale === 'zh-Hans')?.data;
+        const enData = info.data?.find(item => item.locale === 'en')?.data;
+        
+        // 根据当前语言选择数据
+        const data = currentLanguage === 'zh' ? (zhData || enData) : (enData || zhData);
+        
+        if (!data) {
+            modalContent.innerHTML = `<div class="lib-info-error">${translations[currentLanguage].noLibInfo}</div>`;
+            return;
+        }
+        
+        let html = `<div class="lib-info-title">${data.label || libName}</div>`;
+        
+        if (data.dev_team) {
+            html += `<div class="lib-info-content"><strong>${translations[currentLanguage].devTeam}:</strong> ${data.dev_team}</div>`;
+        }
+        
+        if (data.description) {
+            html += `<div class="lib-info-content">${data.description}</div>`;
+        }
+        
+        if (data.source_link) {
+            html += `<div class="lib-info-content"><a href="${data.source_link}" target="_blank" class="lib-info-link">${translations[currentLanguage].sourceLink}</a></div>`;
+        }
+        
+        if (data.rule_contributors && data.rule_contributors.length > 0) {
+            html += `<div class="lib-info-content"><strong>${translations[currentLanguage].ruleContributors}:</strong> ${data.rule_contributors.join(', ')}</div>`;
+        }
+        
+        modalContent.innerHTML = html;
+    }).catch(error => {
+        modalContent.innerHTML = `<div class="lib-info-error">${translations[currentLanguage].error}: ${error.message}</div>`;
+    });
+}
+
+// 关闭模态窗口
+function closeLibInfoModal() {
+    const modal = document.getElementById('libInfoModal');
+    modal.classList.remove('show');
+    // 等待动画完成后隐藏模态窗口
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+// 添加ESC键关闭模态窗口功能
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('libInfoModal');
+        if (modal.style.display === 'block') {
+            closeLibInfoModal();
+        }
+    }
+});
+
 function renderReport() {
     const root = document.getElementById('report-root');
     root.innerHTML = '';
     const showNonCompliant = document.getElementById('showNonCompliant').classList.contains('active');
+    
+    // 检查是否有数据
+    if (!soAnalysisData || soAnalysisData.length === 0) {
+        root.innerHTML = `<div class="no-data-message">${currentLanguage === 'zh' ? '没有可用的SO库数据' : 'No SO library data available'}</div>`;
+        return;
+    }
+    
+    // 添加动画效果的计数器
+    let animationDelay = 0;
+    
     soAnalysisData.forEach(module => {
         if (showNonCompliant && !hasNonCompliant(module)) return;
+        
         const card = document.createElement('div');
         card.className = 'module-card';
-        card.innerHTML = `<div class="module-title">Dependency: ${module.moduleName}</div>`;
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        card.style.transitionDelay = `${animationDelay}s`;
+        
+        // 模块标题添加图标
+        card.innerHTML = `
+            <div class="module-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: -2px;">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                ${translations[currentLanguage].dependency}${module.moduleName}
+            </div>
+        `;
+        
         // 动态表头
         const archs = getSortedArchs(module);
         const table = document.createElement('table');
+        table.className = 'modern-table';
+        
         const thead = document.createElement('thead');
-        thead.innerHTML = `<tr><th>SO Library</th>${archs.map(a=>`<th>${a}</th>`).join('')}</tr>`;
+        thead.innerHTML = `<tr><th>${translations[currentLanguage].soLibrary}</th>${archs.map(a=>`<th>${a}</th>`).join('')}</tr>`;
         table.appendChild(thead);
+        
         const tbody = document.createElement('tbody');
-        module.soFiles.forEach(so => {
+        module.soFiles.forEach((so, index) => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${so.name}</td>`;
+            
+            // 添加行交替颜色
+            if (index % 2 === 1) {
+                tr.classList.add('alt-row');
+            }
+            
+            // 添加行悬停效果
+            tr.addEventListener('mouseenter', function() {
+                this.classList.add('row-hover');
+            });
+            tr.addEventListener('mouseleave', function() {
+                this.classList.remove('row-hover');
+            });
+            
+            // 添加库名称和信息图标
+            const libNameCell = document.createElement('td');
+            libNameCell.className = 'lib-name-cell';
+            
+            const libNameSpan = document.createElement('span');
+            libNameSpan.textContent = so.name;
+            libNameSpan.className = 'lib-name';
+            libNameCell.appendChild(libNameSpan);
+            
+            // 添加信息图标
+            const infoIcon = document.createElement('span');
+            infoIcon.className = 'lib-info-icon';
+            infoIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+            infoIcon.title = translations[currentLanguage].viewLibInfo;
+            infoIcon.onclick = function(e) {
+                e.stopPropagation(); // 防止事件冒泡
+                showLibInfoModal(so.name);
+            };
+            libNameCell.appendChild(infoIcon);
+            tr.appendChild(libNameCell);
+            
+            // 添加架构信息
             archs.forEach(arch => {
                 const arr = (so.architectures||{})[arch];
                 if (!arr || arr.length === 0) {
-                    tr.innerHTML += '<td class="missing" title="Not present for this architecture"><span class="emoji">/</span></td>';
+                    const td = document.createElement('td');
+                    td.className = 'missing';
+                    td.title = translations[currentLanguage].notPresent;
+                    td.innerHTML = '<span class="emoji">—</span>';
+                    tr.appendChild(td);
                 } else {
                     const info = arr[0];
                     let cellClass = 'normal';
                     let cellHtml = info.alignmentKb + 'KB';
-                    let tooltip = `${info.alignmentKb}KB page size`;
+                    let tooltip = `${info.alignmentKb}KB ${translations[currentLanguage].pageSize}`;
+                    
                     if ((arch === "arm64-v8a" || arch === "x86_64")) {
                         if (isCompliant(arch, info)) {
                             cellClass = 'pass';
-                            cellHtml = `<span class="emoji" title="Compatible with 16 KB devices.">🟢</span> ` + cellHtml;
-                            tooltip = 'Compatible with 16 KB devices.';
+                            cellHtml = `<span class="emoji" title="${translations[currentLanguage].compatible}">✓</span> ` + cellHtml;
+                            tooltip = translations[currentLanguage].compatible;
                         } else {
                             cellClass = 'warn';
-                            cellHtml = `<span class="emoji" title="Not compatible with 16 KB devices. LOAD segment not aligned at 16 KB boundary.">⚠️</span> ` + cellHtml;
-                            tooltip = 'Not compatible with 16 KB devices. LOAD segment not aligned at 16 KB boundary.';
+                            cellHtml = `<span class="emoji" title="${translations[currentLanguage].notCompatible}">⚠</span> ` + cellHtml;
+                            tooltip = translations[currentLanguage].notCompatible;
                         }
                     }
-                    tr.innerHTML += `<td class="${cellClass}" title="${tooltip}">${cellHtml}</td>`;
+                    
+                    const td = document.createElement('td');
+                    td.className = cellClass;
+                    td.title = tooltip;
+                    td.innerHTML = cellHtml;
+                    tr.appendChild(td);
                 }
             });
             tbody.appendChild(tr);
         });
+        
         table.appendChild(tbody);
         card.appendChild(table);
         root.appendChild(card);
+        
+        // 触发动画
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 10);
+        
+        // 增加下一个卡片的延迟
+        animationDelay += 0.1;
     });
 }
 document.getElementById('showAll').onclick = function() {
@@ -145,7 +815,77 @@ document.getElementById('showNonCompliant').onclick = function() {
     document.getElementById('showAll').classList.remove('active');
     renderReport();
 };
+document.getElementById('toggleLanguage').onclick = function() {
+    // 切换语言
+    currentLanguage = currentLanguage === 'zh' ? 'en' : 'zh';
+    updateUILanguage();
+    renderReport();
+};
+
+// 更新UI语言
+function updateUILanguage() {
+    // 更新标题
+    document.getElementById('reportTitle').textContent = translations[currentLanguage].reportTitle;
+    
+    // 更新按钮文本
+    document.getElementById('showAll').textContent = translations[currentLanguage].allDependencies;
+    document.getElementById('showNonCompliant').textContent = translations[currentLanguage].showNonCompliant;
+    document.getElementById('pageGuideLink').textContent = translations[currentLanguage].pageGuide;
+    
+    // 更新页脚
+    const footerInfo = document.getElementById('footerInfo');
+    footerInfo.innerHTML = `
+        <p>${translations[currentLanguage].footerInfo1}</p>
+        <p>${translations[currentLanguage].footerInfo2}</p>
+    `;
+}
+
+// 设置模态窗口关闭按钮的事件处理程序
+document.querySelector('.close-modal').onclick = closeLibInfoModal;
+
+// 点击模态窗口外部区域关闭模态窗口
+window.onclick = function(event) {
+    const modal = document.getElementById('libInfoModal');
+    if (event.target === modal) {
+        closeLibInfoModal();
+    }
+};
+
+// 添加键盘ESC键关闭模态窗口
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('libInfoModal');
+        if (modal.style.display === 'block') {
+            closeLibInfoModal();
+        }
+    }
+});
+
+// 初始化UI语言
+updateUILanguage();
+
+// 初始化报告
 renderReport();
+
+// 添加错误处理，以防止跨域问题
+window.addEventListener('error', function(e) {
+    if (e.message && (e.message.includes('Cross-Origin') || e.message.includes('CORS'))) {
+        console.warn(translations[currentLanguage].corsError);
+        // 可以在这里添加一个提示，告诉用户如何解决CORS问题
+    }
+});
+
+// 提供一个全局函数，允许用户手动获取库信息
+window.getLibraryInfo = async function(libName) {
+    try {
+        const info = await fetchLibraryInfo(libName);
+        console.log(translations[currentLanguage].libInfoFor.replace('{0}', libName), info);
+        return info;
+    } catch (error) {
+        console.error(translations[currentLanguage].failedToGetLibInfo.replace('{0}', libName), error);
+        return null;
+    }
+};
 </script>
 </body>
 </html>
