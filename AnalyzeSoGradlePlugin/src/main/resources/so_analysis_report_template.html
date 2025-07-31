@@ -193,6 +193,67 @@
             position: relative;
         }
         
+        /* Tab栏横向滚动样式 */
+        .variant-tabs-container {
+            margin-bottom: 24px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+        
+        .variant-tabs-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .variant-tabs-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .variant-tabs-container::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 3px;
+        }
+        
+        .variant-tabs-container::-webkit-scrollbar-thumb:hover {
+            background-color: var(--text-secondary);
+        }
+        
+        .variant-tabs-list {
+            display: flex;
+            gap: 12px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            min-width: max-content;
+        }
+        
+        .variant-tabs-list li {
+            flex-shrink: 0;
+        }
+        
+        /* 表格行悬停效果 */
+        tr:hover {
+            background-color: rgba(67, 97, 238, 0.02);
+        }
+        
+        tr.row-hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        tr.alt-row {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        tr.alt-row:hover {
+            background-color: rgba(67, 97, 238, 0.03);
+        }
+        
+        tr.alt-row.row-hover {
+            background-color: rgba(67, 97, 238, 0.06);
+        }
+        
         .lib-info-icon { 
             cursor: pointer; 
             margin-left: 8px; 
@@ -414,8 +475,7 @@
     <h1 id="reportTitle">Android SO Library Page Size Compatibility Report</h1>
     <div class="filter-bar">
         <a href="https://developer.android.com/guide/practices/page-sizes" target="_blank" style="font-size:0.98em;text-decoration:underline;color:#2a5d8f;" id="pageGuideLink">Android Page Size Guide</a>
-        <button class="filter-btn active" id="showAll">All Dependencies</button>
-        <button class="filter-btn" id="showNonCompliant">Show Only Non-compliant</button>
+        <button class="filter-btn active" id="toggleFilter">All Dependencies</button>
         <button class="filter-btn" id="toggleLanguage">中/EN</button>
     </div>
     <div id="report-root"></div>
@@ -466,12 +526,9 @@ function renderTabsIfNeeded() {
         const keys = Object.keys(allVariantsData);
         const bar = document.createElement('div');
         bar.id = tabBarId;
-        bar.style.marginBottom = '24px';
+        bar.className = 'variant-tabs-container';
         let ul = document.createElement('ul');
-        ul.style.display = 'flex';
-        ul.style.gap = '12px';
-        ul.style.listStyle = 'none';
-        ul.style.padding = '0';
+        ul.className = 'variant-tabs-list';
         keys.forEach((variant, idx) => {
             let li = document.createElement('li');
             let btn = document.createElement('button');
@@ -742,7 +799,7 @@ document.addEventListener('keydown', function(event) {
 function renderReport() {
     const root = document.getElementById('report-root');
     root.innerHTML = '';
-    const showNonCompliant = document.getElementById('showNonCompliant').classList.contains('active');
+    const showNonCompliant = !document.getElementById('toggleFilter').classList.contains('active');
     
     // 检查是否有数据
     if (!soAnalysisData || soAnalysisData.length === 0) {
@@ -873,14 +930,19 @@ function renderReport() {
         animationDelay += 0.1;
     });
 }
-document.getElementById('showAll').onclick = function() {
-    this.classList.add('active');
-    document.getElementById('showNonCompliant').classList.remove('active');
-    renderReport();
-};
-document.getElementById('showNonCompliant').onclick = function() {
-    this.classList.add('active');
-    document.getElementById('showAll').classList.remove('active');
+document.getElementById('toggleFilter').onclick = function() {
+    const btn = document.getElementById('toggleFilter');
+    const isShowingAll = btn.classList.contains('active');
+    
+    if (isShowingAll) {
+        // 切换到仅显示不兼容项
+        btn.classList.remove('active');
+        btn.textContent = translations[currentLanguage].showNonCompliant;
+    } else {
+        // 切换到显示所有依赖
+        btn.classList.add('active');
+        btn.textContent = translations[currentLanguage].allDependencies;
+    }
     renderReport();
 };
 document.getElementById('toggleLanguage').onclick = function() {
@@ -896,8 +958,11 @@ function updateUILanguage() {
     document.getElementById('reportTitle').textContent = translations[currentLanguage].reportTitle;
     
     // 更新按钮文本
-    document.getElementById('showAll').textContent = translations[currentLanguage].allDependencies;
-    document.getElementById('showNonCompliant').textContent = translations[currentLanguage].showNonCompliant;
+    const toggleFilterBtn = document.getElementById('toggleFilter');
+    const isShowingAll = toggleFilterBtn.classList.contains('active');
+    toggleFilterBtn.textContent = isShowingAll ? 
+        translations[currentLanguage].allDependencies : 
+        translations[currentLanguage].showNonCompliant;
     document.getElementById('pageGuideLink').textContent = translations[currentLanguage].pageGuide;
     
     // 更新页脚
