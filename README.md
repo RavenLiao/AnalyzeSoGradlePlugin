@@ -20,6 +20,25 @@ Other Language: [中文](README_zh.md)
 ### Planned
 - Issues and suggestions are welcome!
 
+## Prerequisites (objdump)
+
+Purpose: the plugin runs `objdump -p` to parse ELF Program Headers for `Align 2**N` (page size). If you only need the so library source and architecture info, you can ignore this.
+
+### Linux
+- Install binutils if missing:
+  - Debian/Ubuntu: `sudo apt-get install binutils`
+  - Fedora/RHEL/CentOS: `sudo dnf install binutils`
+  - Arch: `sudo pacman -S binutils`
+
+### macOS
+- Usually works out of the box. If needed: `brew install binutils`.
+
+### Windows (GUI)
+1) Download and run the TDM-GCC installer: https://jmeubank.github.io/tdm-gcc/
+2) During setup, choose "Add to PATH" (or the equivalent option).
+3) Finish installation. `objdump.exe` will be available to Gradle.
+
+
 ## Quick Start
 **How to apply the Gradle plugin:**
 

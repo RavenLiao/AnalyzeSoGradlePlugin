@@ -20,6 +20,21 @@ Other Language：[English](README.md)
 ### 待实现
 - 欢迎提出问题或建议！
 
+## 环境依赖（objdump）
+
+插件通过执行 `objdump -p` 来解析 ELF Program Header 的 `Align 2**N`（内存页大小）。若仅需要分析 so 库来源和架构信息，可以忽略。
+
+### Linux
+- 一般已内置；如缺请安装 binutils（例如 `sudo apt-get install binutils`、`sudo dnf install binutils`、`sudo pacman -S binutils`）。
+
+### macOS
+- 通常可直接使用；如需可执行：`brew install binutils`。
+
+### Windows（图形化）
+1) 下载并运行 TDM-GCC 安装器：https://jmeubank.github.io/tdm-gcc/
+2) 安装过程中选择“Add to PATH”（或等效选项）。
+3) 完成安装后，`objdump.exe` 可被 Gradle 直接使用。
+
 ## 快速开始
 **Gradle 插件引入方式：**
 
