@@ -53,7 +53,7 @@ Other Language：[English](README.md)
  
  ## Configuration Cache（Gradle）
  
- 本插件的分析任务在部分环境下可能会导致 Gradle 的 Configuration Cache 失效或报错。如你开启了 Configuration Cache 并遇到问题，可在项目的 `gradle.properties` 中添加：
+ 启用 Gradle 的 Configuration Cache 后，本插件的分析任务在部分环境下可能会导致任务运行失败，并使 Configuration Cache entry 被丢弃或报错。如你开启了 Configuration Cache 并遇到问题，可在项目的 `gradle.properties` 中添加：
  
  ```properties
  org.gradle.configuration-cache=false

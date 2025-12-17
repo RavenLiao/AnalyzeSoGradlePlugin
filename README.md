@@ -59,7 +59,7 @@ plugins {
 
 ## Configuration Cache (Gradle)
  
- The analysis tasks may cause Gradle configuration cache to be discarded or fail in some environments. If you encounter issues when configuration cache is enabled, disable it in your `gradle.properties`:
+ Enabling Gradle Configuration Cache may cause these analysis tasks to fail and/or the configuration cache entry to be discarded in some environments. If you encounter issues when configuration cache is enabled, disable it in your `gradle.properties`:
  
  ```properties
  org.gradle.configuration-cache=false
