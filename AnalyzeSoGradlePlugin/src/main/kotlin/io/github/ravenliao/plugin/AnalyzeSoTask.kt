@@ -1,8 +1,10 @@
 package io.github.ravenliao.plugin
 
 import java.io.File
+import java.util.zip.ZipFile
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Attribute
@@ -141,6 +143,122 @@ abstract class AnalyzeSoTask : DefaultTask() {
         }
     }
 
+    private fun collectSoFilesFromArtifact(
+        artifactFile: File,
+        moduleName: String,
+        objdumpPath: String
+    ): List<SoInfo> {
+        if (artifactFile.isDirectory) {
+            return SoCollector.collectSoFilesFromDirectory(
+                artifactFile,
+                { so -> ElfUtils.checkElfAlignmentWithKb(so, objdumpPath) }
+            )
+        }
+
+        if (!isArchiveFile(artifactFile)) return emptyList()
+
+        val maxArchiveSizeBytes = AnalyzeSoReportUtils.readMaxArchiveSizeBytesOrNull(project)
+        if (maxArchiveSizeBytes != null && artifactFile.length() > maxArchiveSizeBytes) {
+            val actualMb = artifactFile.length() / (1024L * 1024L)
+            val limitMb = maxArchiveSizeBytes / (1024L * 1024L)
+            logger.warn(
+                "[analyzeSo] Skip archive extraction due to size limit: ${artifactFile.absolutePath} (${actualMb}MB > ${limitMb}MB). " +
+                    "You can override via '${AnalyzeSoConstants.PROP_MAX_ARCHIVE_MB_DOT}' or '${AnalyzeSoConstants.PROP_MAX_ARCHIVE_MB_CAMEL}' (set <=0 to disable)."
+            )
+            return emptyList()
+        }
+
+        val extractDir = getOrPrepareExtractDir(artifactFile, moduleName)
+        val extracted = extractSoEntriesFromArchive(artifactFile, extractDir)
+        if (!extracted) return emptyList()
+
+        return SoCollector.collectSoFilesFromDirectory(
+            extractDir,
+            { so -> ElfUtils.checkElfAlignmentWithKb(so, objdumpPath) }
+        )
+    }
+
+    private fun isArchiveFile(file: File): Boolean {
+        val name = file.name.lowercase()
+        return name.endsWith(".aar") || name.endsWith(".zip") || name.endsWith(".jar")
+    }
+
+    private fun getOrPrepareExtractDir(artifactFile: File, moduleName: String): File {
+        val variant = variantName.orNull ?: "unknown"
+        val baseDir = reportFile.get().asFile.parentFile
+        val safeModule = sanitizeFileName(moduleName).take(80)
+        val signature = (artifactFile.absolutePath + ":" + artifactFile.length() + ":" + artifactFile.lastModified()).hashCode()
+        val dir = File(baseDir, "extracted/${safeModule}_${signature}")
+
+        if (!dir.exists()) {
+            dir.mkdirs()
+            return dir
+        }
+
+        val marker = File(dir, ".marker")
+        val expected = "${artifactFile.length()}:${artifactFile.lastModified()}:$variant"
+        val actual = marker.takeIf { it.exists() }?.readText(Charsets.UTF_8)
+        if (actual != expected) {
+            dir.deleteRecursively()
+            dir.mkdirs()
+        }
+        return dir
+    }
+
+    private fun extractSoEntriesFromArchive(archive: File, destDir: File): Boolean {
+        val marker = File(destDir, ".marker")
+        val expected = "${archive.length()}:${archive.lastModified()}:${variantName.orNull ?: "unknown"}"
+        val actual = marker.takeIf { it.exists() }?.readText(Charsets.UTF_8)
+        if (actual == expected) return true
+
+        destDir.mkdirs()
+        destDir.listFiles()?.forEach { if (it.name != ".marker") it.deleteRecursively() }
+
+        val destCanonical = destDir.canonicalFile
+        var extractedAny = false
+        try {
+            ZipFile(archive).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.isDirectory) continue
+                    if (!entry.name.endsWith(".so")) continue
+                    val outFile = File(destDir, entry.name)
+                    val outCanonical = outFile.canonicalFile
+                    if (!outCanonical.path.startsWith(destCanonical.path)) continue
+                    outFile.parentFile?.mkdirs()
+                    zip.getInputStream(entry).use { input ->
+                        outFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    extractedAny = true
+                }
+            }
+        } catch (t: Throwable) {
+            logger.warn("Failed to extract archive for SO scan: ${archive.absolutePath}", t)
+            return false
+        }
+
+        if (!extractedAny) return false
+        marker.writeText(expected, Charsets.UTF_8)
+        return true
+    }
+
+    private fun sanitizeFileName(value: String): String {
+        val sb = StringBuilder(value.length)
+        for (ch in value) {
+            sb.append(
+                when {
+                    ch.isLetterOrDigit() -> ch
+                    ch == '.' || ch == '-' || ch == '_' -> ch
+                    else -> '_'
+                }
+            )
+        }
+        return sb.toString().ifBlank { "module" }
+    }
+
     /**
      * 处理单个工件
      */
@@ -160,14 +278,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
             val moduleName = artifact.id.componentIdentifier.displayName
             val introducedBy = introducedByMap[moduleName] ?: emptyList()
             val introducedByPaths = introducedByPathsMap[moduleName] ?: emptyMap()
-            val soFiles: List<SoInfo> = if (artifactFile.isDirectory) {
-                SoCollector.collectSoFilesFromDirectory(
-                    artifactFile,
-                    { so -> ElfUtils.checkElfAlignmentWithKb(so, objdumpPath) }
-                )
-            } else {
-                emptyList()
-            }
+            val soFiles: List<SoInfo> = collectSoFilesFromArtifact(artifactFile, moduleName, objdumpPath)
 
             if (soFiles.isEmpty()) {
                 logger.debug("No SO files found in module: $moduleName")
@@ -218,11 +329,13 @@ abstract class AnalyzeSoTask : DefaultTask() {
         val templateStream =
             javaClass.classLoader?.getResourceAsStream(AnalyzeSoConstants.TEMPLATE_RESOURCE)
         if (templateStream != null) {
-            val template = templateStream.bufferedReader(Charsets.UTF_8).readText()
-            // 用紧凑JSON，避免HTML体积过大
-            val compactJson = Json.encodeToString(modules)
-            val htmlContent = template.replace(AnalyzeSoConstants.PLACEHOLDER_SINGLE_JSON, compactJson)
-            htmlFile.writeText(htmlContent, Charsets.UTF_8)
+            templateStream.use { stream ->
+                val template = stream.bufferedReader(Charsets.UTF_8).readText()
+                // 用紧凑JSON，避免HTML体积过大
+                val compactJson = Json.encodeToString(modules)
+                val htmlContent = template.replace(AnalyzeSoConstants.PLACEHOLDER_SINGLE_JSON, compactJson)
+                htmlFile.writeText(htmlContent, Charsets.UTF_8)
+            }
         } else {
             logger.warn("${AnalyzeSoConstants.TEMPLATE_RESOURCE} not found in resources, HTML report not generated.")
         }

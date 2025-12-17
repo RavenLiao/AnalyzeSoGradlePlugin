@@ -17,35 +17,41 @@ object SoCollector {
             "riscv64"
         )
 
-        val archMap = mutableMapOf<String, MutableList<SoDetail>>()
-        val soNameSet = mutableSetOf<String>()
-        val basePathLength = directory.absolutePath.length + 1
+        val bySoName = mutableMapOf<String, MutableMap<String, MutableList<SoDetail>>>()
 
+        val basePath = directory.toPath()
         directory.walkTopDown()
             .filter { it.isFile && it.name.endsWith(".so") }
             .forEach { soFile ->
-                val relativePath = soFile.absolutePath.substring(basePathLength).replace('\\', '/')
+                val relativePath = try {
+                    basePath.relativize(soFile.toPath()).toString().replace('\\', '/')
+                } catch (_: Exception) {
+                    soFile.absolutePath.replace('\\', '/')
+                }
                 val parts = relativePath.split('/').filter { it.isNotEmpty() }
                 val arch = parts.firstOrNull { it in knownAbis } ?: "unknown"
                 val fileName = soFile.name
 
-                soNameSet.add(fileName)
                 val (aligned, alignment, alignmentKb) = checkElf(soFile)
-                archMap.getOrPut(arch) { mutableListOf() }.add(
-                    SoDetail(
-                        fileName = fileName,
-                        filePath = soFile.absolutePath,
-                        aligned = aligned,
-                        alignment = alignment,
-                        alignmentKb = alignmentKb
+                bySoName
+                    .getOrPut(fileName) { mutableMapOf() }
+                    .getOrPut(arch) { mutableListOf() }
+                    .add(
+                        SoDetail(
+                            fileName = fileName,
+                            filePath = soFile.absolutePath,
+                            aligned = aligned,
+                            alignment = alignment,
+                            alignmentKb = alignmentKb
+                        )
                     )
-                )
             }
-        // 按so逻辑名聚合
-        return soNameSet.sorted().map { soName ->
-            val archMapForSo = archMap.filterValues { list -> list.any { it.fileName == soName } }
-                .mapValues { (_, list) -> list.filter { it.fileName == soName } }
-            SoInfo(soName, archMapForSo)
-        }
+
+        return bySoName
+            .toSortedMap()
+            .map { (soName, archMap) ->
+                val archFinal = archMap.toSortedMap().mapValues { (_, list) -> list.toList() }
+                SoInfo(soName, archFinal)
+            }
     }
 }

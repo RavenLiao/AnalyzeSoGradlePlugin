@@ -46,4 +46,16 @@ internal object AnalyzeSoReportUtils {
             ?: project.providers.systemProperty(AnalyzeSoConstants.PROP_OBJDUMP_PATH_CAMEL).orNull
             ?: "objdump"
     }
+
+    fun readMaxArchiveSizeBytesOrNull(project: Project): Long? {
+        val raw =
+            project.providers.gradleProperty(AnalyzeSoConstants.PROP_MAX_ARCHIVE_MB_DOT).orNull
+                ?: project.providers.gradleProperty(AnalyzeSoConstants.PROP_MAX_ARCHIVE_MB_CAMEL).orNull
+                ?: project.providers.systemProperty(AnalyzeSoConstants.PROP_MAX_ARCHIVE_MB_DOT).orNull
+                ?: project.providers.systemProperty(AnalyzeSoConstants.PROP_MAX_ARCHIVE_MB_CAMEL).orNull
+
+        val mb = raw?.trim()?.toLongOrNull() ?: AnalyzeSoConstants.DEFAULT_MAX_ARCHIVE_SIZE_MB
+        if (mb <= 0L) return null
+        return mb * 1024L * 1024L
+    }
 }

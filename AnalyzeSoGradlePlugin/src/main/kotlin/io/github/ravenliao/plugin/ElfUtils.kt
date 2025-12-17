@@ -1,6 +1,9 @@
 package io.github.ravenliao.plugin
 
 import java.io.File
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 
 object ElfUtils {
     /**
@@ -15,12 +18,32 @@ object ElfUtils {
             val process = ProcessBuilder(objdumpPath, "-p", soFile.absolutePath)
                 .redirectErrorStream(true)
                 .start()
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
-            val loadLine = output.lines().firstOrNull { it.trim().startsWith("LOAD") }
-            val alignment = loadLine?.split(Regex("\\s+"))?.lastOrNull() ?: "unknown"
-            val aligned = Regex("2\\*\\*(1[4-9]|[2-9][0-9]|[1-9][0-9]{2,})").matches(alignment)
+
+            val outputRef = AtomicReference<String>("")
+            val readerThread = thread(start = true, isDaemon = true) {
+                runCatching {
+                    process.inputStream.bufferedReader().use { it.readText() }
+                }.onSuccess { outputRef.set(it) }
+            }
+
+            val finished = process.waitFor(5, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                readerThread.join(200)
+                return Triple(false, "timeout", null)
+            }
+
+            readerThread.join(1000)
+            val exitCode = runCatching { process.exitValue() }.getOrNull()
+            if (exitCode == null || exitCode != 0) {
+                return Triple(false, "error", null)
+            }
+
+            val output = outputRef.get()
+            val loadLine = output.lineSequence().firstOrNull { it.trim().startsWith("LOAD") }
+            val alignment = loadLine?.trim()?.split(Regex("\\s+"))?.lastOrNull() ?: "unknown"
             val alignmentKb = parseAlignmentKb(alignment)
+            val aligned = alignmentKb?.let { it >= 16 } == true
             Triple(aligned, alignment, alignmentKb)
         } catch (e: Exception) {
             Triple(false, "error", null)

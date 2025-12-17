@@ -21,6 +21,10 @@ internal object AnalyzeSoConstants {
     const val PROP_OBJDUMP_PATH_DOT = "analyzeSo.objdumpPath"
     const val PROP_OBJDUMP_PATH_CAMEL = "analyzeSoObjdumpPath"
 
+    const val PROP_MAX_ARCHIVE_MB_DOT = "analyzeSo.maxArchiveSizeMb"
+    const val PROP_MAX_ARCHIVE_MB_CAMEL = "analyzeSoMaxArchiveSizeMb"
+    const val DEFAULT_MAX_ARCHIVE_SIZE_MB = 200L
+
     const val ATTRIBUTE_ARTIFACT_TYPE = "artifactType"
     const val ARTIFACT_TYPE_ANDROID_JNI = "android-jni"
 }

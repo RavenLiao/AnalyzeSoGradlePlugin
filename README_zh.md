@@ -100,6 +100,18 @@ app/build/reports/analyze-so/Debug/analyze-so-report.html
 ./gradlew analyzeDebugSo -PanalyzeSoObjdumpPath=/path/to/objdump
 ```
 
+可选：如果你的依赖中包含较大的 AAR/ZIP/JAR，插件在扫描其中的 `.so` 时会尝试解包。为避免极端情况下解包导致构建变慢，默认只会解包不超过 **200MB** 的 archive。你可以修改或关闭这个限制：
+
+```bash
+# 将最大可解包大小设置为 500MB
+./gradlew analyzeDebugSo -PanalyzeSoMaxArchiveSizeMb=500
+
+# 关闭限制（<=0 表示关闭）
+./gradlew analyzeDebugSo -PanalyzeSoMaxArchiveSizeMb=0
+```
+
+说明：Windows PowerShell 下如果使用带点的属性名，可用 `"-PanalyzeSo.maxArchiveSizeMb=500"`（需要引号）。
+
 ## 特别感谢
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): 本项目参考了其实现思路

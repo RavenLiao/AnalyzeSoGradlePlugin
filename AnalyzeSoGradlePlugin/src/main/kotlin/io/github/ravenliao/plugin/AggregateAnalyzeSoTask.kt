@@ -56,9 +56,9 @@ abstract class AggregateAnalyzeSoTask : DefaultTask() {
     private fun buildAggregateHtml(variantJsons: Map<String, String>): String {
         val classLoader = javaClass.classLoader
             ?: error("ClassLoader is null, cannot load ${AnalyzeSoConstants.TEMPLATE_RESOURCE}")
-        val templateStream =
-            classLoader.getResourceAsStream(AnalyzeSoConstants.TEMPLATE_RESOURCE)
-        val template = templateStream?.bufferedReader(Charsets.UTF_8)?.readText()
+        val template = classLoader
+            .getResourceAsStream(AnalyzeSoConstants.TEMPLATE_RESOURCE)
+            ?.use { it.bufferedReader(Charsets.UTF_8).readText() }
             ?: error("${AnalyzeSoConstants.TEMPLATE_RESOURCE} not found in resources")
         return if (variantJsons.size > 1) {
             val allVariantsJson = Json.encodeToString(variantJsons)

@@ -104,6 +104,18 @@ Optional: if your environment does not provide `objdump` (common on Windows/CI) 
 ./gradlew analyzeDebugSo -PanalyzeSoObjdumpPath=/path/to/objdump
 ```
 
+Optional: if your dependencies contain large AAR/ZIP/JAR artifacts, the plugin may extract them to scan `.so` files. To avoid worst-case build slowdowns, it only extracts archives up to **200MB** by default. You can override or disable this limit:
+
+```bash
+# Set max extractable archive size to 500MB
+./gradlew analyzeDebugSo -PanalyzeSoMaxArchiveSizeMb=500
+
+# Disable the limit (<=0 means disabled)
+./gradlew analyzeDebugSo -PanalyzeSoMaxArchiveSizeMb=0
+```
+
+Note: On Windows PowerShell, if you prefer the dotted property name, use `"-PanalyzeSo.maxArchiveSizeMb=500"` (quoted).
+
 ## Special Thanks
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): This project references its implementation ideas
