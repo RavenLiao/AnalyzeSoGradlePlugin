@@ -5,6 +5,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -100,6 +102,9 @@ abstract class AnalyzeSoTask : DefaultTask() {
         logger.info("Analyzing configuration: ${configuration.name}")
 
         return try {
+            val introducedByMap = computeIntroducedByMap(configuration)
+            val introducedByPathsMap = computeIntroducedByPathsMap(configuration)
+
             // 创建 ArtifactView 来获取 JNI 工件
             val artifactView = configuration.incoming.artifactView {
                 attributes {
@@ -112,7 +117,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
 
             // 处理每个工件
             artifactView.artifacts.artifacts.mapNotNull { artifact ->
-                processArtifact(artifact)
+                processArtifact(artifact, introducedByMap, introducedByPathsMap)
             }.filter { it.soFiles.isNotEmpty() }
 
         } catch (exception: Exception) {
@@ -127,7 +132,11 @@ abstract class AnalyzeSoTask : DefaultTask() {
     /**
      * 处理单个工件
      */
-    private fun processArtifact(artifact: org.gradle.api.artifacts.result.ResolvedArtifactResult): ModuleSoInfo? {
+    private fun processArtifact(
+        artifact: org.gradle.api.artifacts.result.ResolvedArtifactResult,
+        introducedByMap: Map<String, List<String>>,
+        introducedByPathsMap: Map<String, Map<String, List<String>>>
+    ): ModuleSoInfo? {
         return try {
             val artifactFile = artifact.file
             if (!artifactFile.exists()) {
@@ -136,6 +145,8 @@ abstract class AnalyzeSoTask : DefaultTask() {
             }
 
             val moduleName = artifact.id.componentIdentifier.displayName
+            val introducedBy = introducedByMap[moduleName] ?: emptyList()
+            val introducedByPaths = introducedByPathsMap[moduleName] ?: emptyMap()
             val soFiles: List<SoInfo> = if (artifactFile.isDirectory) {
                 SoCollector.collectSoFilesFromDirectory(
                     artifactFile,
@@ -152,6 +163,8 @@ abstract class AnalyzeSoTask : DefaultTask() {
 
             ModuleSoInfo(
                 moduleName = moduleName,
+                introducedBy = introducedBy,
+                introducedByPaths = introducedByPaths,
                 soFiles = soFiles,
                 modulePath = artifactFile.absolutePath
             )
@@ -160,6 +173,147 @@ abstract class AnalyzeSoTask : DefaultTask() {
             logger.warn("Failed to process artifact: ${artifact.id}", exception)
             null
         }
+    }
+
+    private fun computeIntroducedByMap(configuration: Configuration): Map<String, List<String>> {
+        return try {
+            val root = configuration.incoming.resolutionResult.root
+            computeIntroducedByMapFromRoot(root)
+        } catch (exception: Exception) {
+            logger.info(
+                "[analyzeSo] Failed to compute dependency graph for configuration ${configuration.name}, introducedBy will be empty.",
+                exception
+            )
+            emptyMap()
+        }
+    }
+
+    private fun computeIntroducedByMapFromRoot(root: ResolvedComponentResult): Map<String, List<String>> {
+        val result = mutableMapOf<String, MutableSet<String>>()
+
+        val queue = ArrayDeque<Pair<ResolvedComponentResult, Set<String>>>()
+
+        root.dependencies
+            .asSequence()
+            .filterIsInstance<ResolvedDependencyResult>()
+            .filter { !it.isConstraint }
+            .forEach { dep ->
+                val direct = dep.selected
+                val origin = direct.id.displayName
+                result.getOrPut(direct.id.displayName) { mutableSetOf() }.add(origin)
+                queue.addLast(direct to setOf(origin))
+            }
+
+        while (queue.isNotEmpty()) {
+            val (component, origins) = queue.removeFirst()
+
+            component.dependencies
+                .asSequence()
+                .filterIsInstance<ResolvedDependencyResult>()
+                .filter { !it.isConstraint }
+                .forEach { dep ->
+                    val child = dep.selected
+                    val set = result.getOrPut(child.id.displayName) { mutableSetOf() }
+                    val changed = set.addAll(origins)
+                    if (changed) {
+                        queue.addLast(child to origins)
+                    }
+                }
+        }
+
+        return result.mapValues { (_, v) -> v.toList().sorted() }
+    }
+
+    private fun computeIntroducedByPathsMap(configuration: Configuration): Map<String, Map<String, List<String>>> {
+        return try {
+            val root = configuration.incoming.resolutionResult.root
+            computeIntroducedByPathsMapFromRoot(root)
+        } catch (exception: Exception) {
+            logger.info(
+                "[analyzeSo] Failed to compute dependency paths for configuration ${configuration.name}, introducedByPaths will be empty.",
+                exception
+            )
+            emptyMap()
+        }
+    }
+
+    private fun computeIntroducedByPathsMapFromRoot(root: ResolvedComponentResult): Map<String, Map<String, List<String>>> {
+        val topLevelComponents = root.dependencies
+            .asSequence()
+            .filterIsInstance<ResolvedDependencyResult>()
+            .filter { !it.isConstraint }
+            .map { it.selected }
+            .distinctBy { it.id.displayName }
+            .toList()
+
+        val result = mutableMapOf<String, MutableMap<String, List<String>>>()
+        for (top in topLevelComponents) {
+            val topName = top.id.displayName
+            val parent = computeParentsFromTopLevel(top)
+            for ((nodeName, path) in buildPathsFromParentMap(topName, parent)) {
+                result.getOrPut(nodeName) { mutableMapOf() }[topName] = path
+            }
+        }
+        return result
+    }
+
+    private fun computeParentsFromTopLevel(top: ResolvedComponentResult): Map<String, String?> {
+        val parent = mutableMapOf<String, String?>()
+        val seen = mutableSetOf<String>()
+
+        val topName = top.id.displayName
+        parent[topName] = null
+        seen.add(topName)
+
+        val queue = ArrayDeque<ResolvedComponentResult>()
+        queue.addLast(top)
+
+        while (queue.isNotEmpty()) {
+            val component = queue.removeFirst()
+            val componentName = component.id.displayName
+
+            component.dependencies
+                .asSequence()
+                .filterIsInstance<ResolvedDependencyResult>()
+                .filter { !it.isConstraint }
+                .forEach { dep ->
+                    val child = dep.selected
+                    val childName = child.id.displayName
+                    if (seen.add(childName)) {
+                        parent[childName] = componentName
+                        queue.addLast(child)
+                    }
+                }
+        }
+
+        return parent
+    }
+
+    private fun buildPathsFromParentMap(
+        topName: String,
+        parent: Map<String, String?>
+    ): Map<String, List<String>> {
+        val paths = mutableMapOf<String, List<String>>()
+        for (nodeName in parent.keys) {
+            paths[nodeName] = buildPathToTop(nodeName, topName, parent)
+        }
+        return paths
+    }
+
+    private fun buildPathToTop(
+        nodeName: String,
+        topName: String,
+        parent: Map<String, String?>
+    ): List<String> {
+        val path = ArrayList<String>()
+        var current: String? = nodeName
+        while (current != null) {
+            path.add(current)
+            if (current == topName) break
+            current = parent[current]
+        }
+        path.reverse()
+        return path
     }
 
 

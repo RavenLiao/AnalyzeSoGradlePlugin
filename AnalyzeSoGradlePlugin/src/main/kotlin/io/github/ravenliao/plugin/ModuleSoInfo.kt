@@ -9,6 +9,8 @@ import kotlinx.serialization.Serializable
  */
 data class ModuleSoInfo(
     val moduleName: String,
+    val introducedBy: List<String> = emptyList(),
+    val introducedByPaths: Map<String, List<String>> = emptyMap(),
     val soFiles: List<SoInfo>,
     val modulePath: String
 )

@@ -14,6 +14,7 @@ Other Language: [中文](README_zh.md)
 - Output the source and architecture information of so libraries
 - Detect 16KB memory page size to help adapt to Android 15 requirements([Support 16 KB page sizes](https://developer.android.com/guide/practices/page-sizes))
 - Beautiful HTML report output to quickly identify native libraries that are not compatible with Android 15 and their sources
+- Show an expandable "Dependency paths" section in the HTML report to trace transitive native libraries back to your top-level direct dependencies (one shortest resolved path per top-level direct dependency)
 - Add task to aggregate all variants and generate a combined HTML report
 - Integrate with [LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules) database to provide more detailed library information in the HTML report
 

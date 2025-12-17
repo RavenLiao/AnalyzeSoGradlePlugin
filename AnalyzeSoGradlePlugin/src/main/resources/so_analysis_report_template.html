@@ -92,6 +92,115 @@
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
         }
+
+        .module-subtitle {
+            margin-top: 8px;
+            font-size: 0.92em;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .module-paths {
+            margin-top: 10px;
+        }
+
+        .module-paths details {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            background: var(--bg-light);
+        }
+
+        .module-paths summary {
+            cursor: pointer;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .module-paths .path-item {
+            margin-top: 8px;
+            color: var(--text-secondary);
+            font-size: 0.92em;
+            word-break: break-word;
+        }
+
+        .module-sources {
+            margin-top: 10px;
+        }
+
+        .module-sources details {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            background: var(--bg-light);
+        }
+
+        .module-sources summary {
+            cursor: pointer;
+            color: var(--text-primary);
+            font-weight: 500;
+            padding: 6px 8px;
+            border-radius: var(--radius-sm);
+            background: rgba(67, 97, 238, 0.06);
+            user-select: none;
+        }
+
+        .module-sources summary:focus {
+            outline: none;
+        }
+
+        .module-sources details[open] summary {
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .source-group {
+            margin-top: 10px;
+        }
+
+        .source-group-title {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95em;
+            margin-bottom: 6px;
+            word-break: break-word;
+        }
+
+        .dep-path {
+            margin-top: 6px;
+        }
+
+        .dep-path-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 4px 0;
+            margin-left: calc(var(--level, 0) * 16px);
+        }
+
+        .dep-path-bullet {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(141, 153, 174, 0.55);
+            margin-top: 0.45em;
+            flex: 0 0 8px;
+        }
+
+        .dep-path-text {
+            color: var(--text-secondary);
+            font-size: 0.92em;
+            word-break: break-word;
+            line-height: 1.45;
+        }
+
+        .dep-path-bullet-root {
+            background: rgba(67, 97, 238, 0.55);
+        }
+
+        .dep-path-text-root {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
         
         table { 
             border-collapse: separate; 
@@ -604,6 +713,8 @@ const translations = {
         footerInfo2: '点击库名称旁边的 ℹ️ 图标可查看详细信息。',
         pageGuide: 'Android 页面大小指南',
         dependency: '依赖: ',
+        introducedBy: '引入自: ',
+        introducedPaths: '依赖路径',
         soLibrary: 'SO库',
         pageSize: '页面大小',
         corsError: '检测到CORS错误。由于跨域限制，库信息可能无法获取。',
@@ -630,6 +741,8 @@ const translations = {
         footerInfo2: 'Click the ℹ️ icon next to the library name to view details.',
         pageGuide: 'Android Page Size Guide',
         dependency: 'Dependency: ',
+        introducedBy: 'Introduced by: ',
+        introducedPaths: 'Dependency paths',
         soLibrary: 'SO Library',
         pageSize: 'page size',
         corsError: 'CORS error detected. Library information might not be available due to cross-origin restrictions.',
@@ -820,6 +933,59 @@ function renderReport() {
         card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
         card.style.transitionDelay = `${animationDelay}s`;
         
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function buildTreeHtml(path) {
+            const items = path.map((n, i) => {
+                const bulletCls = i === 0 ? 'dep-path-bullet dep-path-bullet-root' : 'dep-path-bullet';
+                const textCls = i === 0 ? 'dep-path-text dep-path-text-root' : 'dep-path-text';
+                return `<div class="dep-path-item" style="--level:${i}"><span class="${bulletCls}"></span><span class="${textCls}">${escapeHtml(n)}</span></div>`;
+            }).join('');
+            return `<div class="dep-path">${items}</div>`;
+        }
+
+        const introducedBy = Array.isArray(module.introducedBy) ? module.introducedBy : [];
+        const introducedByPaths = (module && module.introducedByPaths && typeof module.introducedByPaths === 'object')
+            ? module.introducedByPaths
+            : null;
+
+        let sourcesHtml = '';
+        const hasSources = (introducedByPaths && Object.keys(introducedByPaths).length > 0) || introducedBy.length > 0;
+        if (hasSources) {
+            let inner = '';
+
+            if (introducedByPaths) {
+                const keys = Object.keys(introducedByPaths).sort();
+                inner = keys.map(k => {
+                    const path = Array.isArray(introducedByPaths[k]) ? introducedByPaths[k] : [];
+                    if (path.length === 0) return '';
+                    return `<div class="source-group">${buildTreeHtml(path)}</div>`;
+                }).filter(Boolean).join('');
+            }
+
+            if (!inner && introducedBy.length > 0) {
+                inner = `<div class="source-group"><div class="source-group-title">${translations[currentLanguage].introducedBy}${introducedBy.map(escapeHtml).join(', ')}</div></div>`;
+            }
+
+            if (inner) {
+                sourcesHtml = `
+                    <div class="module-sources">
+                        <details>
+                            <summary>${translations[currentLanguage].introducedPaths}</summary>
+                            ${inner}
+                        </details>
+                    </div>
+                `;
+            }
+        }
+
         // 模块标题添加图标
         card.innerHTML = `
             <div class="module-title">
@@ -830,6 +996,7 @@ function renderReport() {
                 </svg>
                 ${translations[currentLanguage].dependency}${module.moduleName}
             </div>
+            ${sourcesHtml}
         `;
         
         // 动态表头

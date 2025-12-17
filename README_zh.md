@@ -14,6 +14,7 @@ Other Language：[English](README.md)
 - 输出 so 库的来源和架构信息
 - 16KB 内存页大小检测，方便适配 Android 15 的要求([支持 16 KB 的页面大小](https://developer.android.google.cn/guide/practices/page-sizes?hl=zh-cn))
 - 美观的 HTML 报告输出，一键筛出没有兼容Android 15的原生库及其来源。
+- 在 HTML 报告中展示可展开的“依赖路径”，用于从包含 so 的底层依赖反查到顶层直接依赖（按每个顶层直接依赖给出一条最短生效路径）
 - 添加聚合所有变体的任务，并生成合并的 HTML 报告
 - 集成 [LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules) 规则库，在 HTML 报告中提供更详细的库信息
 
