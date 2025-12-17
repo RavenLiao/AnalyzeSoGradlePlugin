@@ -5,8 +5,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.result.ResolvedComponentResult
-import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -25,6 +23,9 @@ import org.gradle.work.DisableCachingByDefault
  */
 @DisableCachingByDefault(because = "Analysis task that should run every time")
 abstract class AnalyzeSoTask : DefaultTask() {
+
+    private val openOnceService =
+        project.gradle.sharedServices.registerIfAbsent("analyzeSoOpenReportOnce", OpenReportOnceService::class.java) {}
 
     /**
      * 要分析的构建变体名称（如 debug, release）
@@ -45,12 +46,14 @@ abstract class AnalyzeSoTask : DefaultTask() {
     abstract val analyzedModules: ListProperty<ModuleSoInfo>
 
     init {
-        group = "analyze-so"
+        group = AnalyzeSoConstants.GROUP
         description = "Analyzes SO files in Android project dependencies for the specified variant"
+
+        usesService(openOnceService)
 
         // 设置默认输出文件
         reportFile.convention(
-            project.layout.buildDirectory.file("reports/analyze-so/analyze-so-report.json")
+            project.layout.buildDirectory.file("${AnalyzeSoConstants.REPORTS_DIR}/${AnalyzeSoConstants.REPORT_JSON_FILE_NAME}")
         )
 
         // 强制任务每次都执行，不走缓存
@@ -72,13 +75,21 @@ abstract class AnalyzeSoTask : DefaultTask() {
             }
 
             // 2. 分析 SO 文件
-            val modules = analyzeNativeLibraries(configuration)
+            val objdumpPath = AnalyzeSoReportUtils.readObjdumpPath(project)
+            val modules = analyzeNativeLibraries(configuration, objdumpPath)
 
             // 3. 生成报告
             generateReport(modules)
 
             // 4. 输出统计信息
             logAnalysisResults(modules)
+
+            // 打开报告
+            val outputFile = reportFile.get().asFile
+            val htmlFile = File(outputFile.parentFile, AnalyzeSoConstants.REPORT_HTML_FILE_NAME)
+            if (AnalyzeSoReportUtils.shouldOpenReport(project, allowWhenAggregateRun = false) && openOnceService.get().tryAcquire()) {
+                AnalyzeSoReportUtils.openInBrowser(logger, htmlFile)
+            }
 
         } catch (exception: Exception) {
             logger.error("Failed to analyze SO files for variant '$variant'", exception)
@@ -98,26 +109,27 @@ abstract class AnalyzeSoTask : DefaultTask() {
     /**
      * 分析配置中的原生库
      */
-    private fun analyzeNativeLibraries(configuration: Configuration): List<ModuleSoInfo> {
+    private fun analyzeNativeLibraries(configuration: Configuration, objdumpPath: String): List<ModuleSoInfo> {
         logger.info("Analyzing configuration: ${configuration.name}")
 
         return try {
-            val introducedByMap = computeIntroducedByMap(configuration)
-            val introducedByPathsMap = computeIntroducedByPathsMap(configuration)
+            val introduced = computeIntroducedByData(configuration)
+            val introducedByMap = introduced.introducedBy
+            val introducedByPathsMap = introduced.introducedByPaths
 
             // 创建 ArtifactView 来获取 JNI 工件
             val artifactView = configuration.incoming.artifactView {
                 attributes {
                     attribute(
-                        Attribute.of("artifactType", String::class.java),
-                        "android-jni"
+                        Attribute.of(AnalyzeSoConstants.ATTRIBUTE_ARTIFACT_TYPE, String::class.java),
+                        AnalyzeSoConstants.ARTIFACT_TYPE_ANDROID_JNI
                     )
                 }
             }
 
             // 处理每个工件
             artifactView.artifacts.artifacts.mapNotNull { artifact ->
-                processArtifact(artifact, introducedByMap, introducedByPathsMap)
+                processArtifact(artifact, introducedByMap, introducedByPathsMap, objdumpPath)
             }.filter { it.soFiles.isNotEmpty() }
 
         } catch (exception: Exception) {
@@ -135,7 +147,8 @@ abstract class AnalyzeSoTask : DefaultTask() {
     private fun processArtifact(
         artifact: org.gradle.api.artifacts.result.ResolvedArtifactResult,
         introducedByMap: Map<String, List<String>>,
-        introducedByPathsMap: Map<String, Map<String, List<String>>>
+        introducedByPathsMap: Map<String, Map<String, List<String>>>,
+        objdumpPath: String
     ): ModuleSoInfo? {
         return try {
             val artifactFile = artifact.file
@@ -150,7 +163,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
             val soFiles: List<SoInfo> = if (artifactFile.isDirectory) {
                 SoCollector.collectSoFilesFromDirectory(
                     artifactFile,
-                    ElfUtils::checkElfAlignmentWithKb
+                    { so -> ElfUtils.checkElfAlignmentWithKb(so, objdumpPath) }
                 )
             } else {
                 emptyList()
@@ -175,147 +188,18 @@ abstract class AnalyzeSoTask : DefaultTask() {
         }
     }
 
-    private fun computeIntroducedByMap(configuration: Configuration): Map<String, List<String>> {
+    private fun computeIntroducedByData(configuration: Configuration): DependencyGraphUtils.IntroducedByResult {
         return try {
             val root = configuration.incoming.resolutionResult.root
-            computeIntroducedByMapFromRoot(root)
+            DependencyGraphUtils.computeIntroducedBy(root)
         } catch (exception: Exception) {
             logger.info(
-                "[analyzeSo] Failed to compute dependency graph for configuration ${configuration.name}, introducedBy will be empty.",
+                "[analyzeSo] Failed to compute dependency graph/paths for configuration ${configuration.name}, introducedBy will be empty.",
                 exception
             )
-            emptyMap()
+            DependencyGraphUtils.IntroducedByResult(emptyMap(), emptyMap())
         }
     }
-
-    private fun computeIntroducedByMapFromRoot(root: ResolvedComponentResult): Map<String, List<String>> {
-        val result = mutableMapOf<String, MutableSet<String>>()
-
-        val queue = ArrayDeque<Pair<ResolvedComponentResult, Set<String>>>()
-
-        root.dependencies
-            .asSequence()
-            .filterIsInstance<ResolvedDependencyResult>()
-            .filter { !it.isConstraint }
-            .forEach { dep ->
-                val direct = dep.selected
-                val origin = direct.id.displayName
-                result.getOrPut(direct.id.displayName) { mutableSetOf() }.add(origin)
-                queue.addLast(direct to setOf(origin))
-            }
-
-        while (queue.isNotEmpty()) {
-            val (component, origins) = queue.removeFirst()
-
-            component.dependencies
-                .asSequence()
-                .filterIsInstance<ResolvedDependencyResult>()
-                .filter { !it.isConstraint }
-                .forEach { dep ->
-                    val child = dep.selected
-                    val set = result.getOrPut(child.id.displayName) { mutableSetOf() }
-                    val changed = set.addAll(origins)
-                    if (changed) {
-                        queue.addLast(child to origins)
-                    }
-                }
-        }
-
-        return result.mapValues { (_, v) -> v.toList().sorted() }
-    }
-
-    private fun computeIntroducedByPathsMap(configuration: Configuration): Map<String, Map<String, List<String>>> {
-        return try {
-            val root = configuration.incoming.resolutionResult.root
-            computeIntroducedByPathsMapFromRoot(root)
-        } catch (exception: Exception) {
-            logger.info(
-                "[analyzeSo] Failed to compute dependency paths for configuration ${configuration.name}, introducedByPaths will be empty.",
-                exception
-            )
-            emptyMap()
-        }
-    }
-
-    private fun computeIntroducedByPathsMapFromRoot(root: ResolvedComponentResult): Map<String, Map<String, List<String>>> {
-        val topLevelComponents = root.dependencies
-            .asSequence()
-            .filterIsInstance<ResolvedDependencyResult>()
-            .filter { !it.isConstraint }
-            .map { it.selected }
-            .distinctBy { it.id.displayName }
-            .toList()
-
-        val result = mutableMapOf<String, MutableMap<String, List<String>>>()
-        for (top in topLevelComponents) {
-            val topName = top.id.displayName
-            val parent = computeParentsFromTopLevel(top)
-            for ((nodeName, path) in buildPathsFromParentMap(topName, parent)) {
-                result.getOrPut(nodeName) { mutableMapOf() }[topName] = path
-            }
-        }
-        return result
-    }
-
-    private fun computeParentsFromTopLevel(top: ResolvedComponentResult): Map<String, String?> {
-        val parent = mutableMapOf<String, String?>()
-        val seen = mutableSetOf<String>()
-
-        val topName = top.id.displayName
-        parent[topName] = null
-        seen.add(topName)
-
-        val queue = ArrayDeque<ResolvedComponentResult>()
-        queue.addLast(top)
-
-        while (queue.isNotEmpty()) {
-            val component = queue.removeFirst()
-            val componentName = component.id.displayName
-
-            component.dependencies
-                .asSequence()
-                .filterIsInstance<ResolvedDependencyResult>()
-                .filter { !it.isConstraint }
-                .forEach { dep ->
-                    val child = dep.selected
-                    val childName = child.id.displayName
-                    if (seen.add(childName)) {
-                        parent[childName] = componentName
-                        queue.addLast(child)
-                    }
-                }
-        }
-
-        return parent
-    }
-
-    private fun buildPathsFromParentMap(
-        topName: String,
-        parent: Map<String, String?>
-    ): Map<String, List<String>> {
-        val paths = mutableMapOf<String, List<String>>()
-        for (nodeName in parent.keys) {
-            paths[nodeName] = buildPathToTop(nodeName, topName, parent)
-        }
-        return paths
-    }
-
-    private fun buildPathToTop(
-        nodeName: String,
-        topName: String,
-        parent: Map<String, String?>
-    ): List<String> {
-        val path = ArrayList<String>()
-        var current: String? = nodeName
-        while (current != null) {
-            path.add(current)
-            if (current == topName) break
-            current = parent[current]
-        }
-        path.reverse()
-        return path
-    }
-
 
     /**
      * 生成分析报告
@@ -325,21 +209,22 @@ abstract class AnalyzeSoTask : DefaultTask() {
         // 确保输出目录存在
         outputFile.parentFile?.mkdirs()
         val json = Json { prettyPrint = true }
+
         val jsonContent = json.encodeToString(modules)
         outputFile.writeText(jsonContent, Charsets.UTF_8)
 
         // 生成HTML报告
-        val htmlFile = File(outputFile.parentFile, "analyze-so-report.html")
+        val htmlFile = File(outputFile.parentFile, AnalyzeSoConstants.REPORT_HTML_FILE_NAME)
         val templateStream =
-            javaClass.classLoader?.getResourceAsStream("so_analysis_report_template.html")
+            javaClass.classLoader?.getResourceAsStream(AnalyzeSoConstants.TEMPLATE_RESOURCE)
         if (templateStream != null) {
             val template = templateStream.bufferedReader(Charsets.UTF_8).readText()
             // 用紧凑JSON，避免HTML体积过大
             val compactJson = Json.encodeToString(modules)
-            val htmlContent = template.replace("__SO_ANALYSIS_JSON_DATA__", compactJson)
+            val htmlContent = template.replace(AnalyzeSoConstants.PLACEHOLDER_SINGLE_JSON, compactJson)
             htmlFile.writeText(htmlContent, Charsets.UTF_8)
         } else {
-            logger.warn("so_analysis_report_template.html not found in resources, HTML report not generated.")
+            logger.warn("${AnalyzeSoConstants.TEMPLATE_RESOURCE} not found in resources, HTML report not generated.")
         }
 
         logger.info("SO analysis report generated: ${outputFile.absolutePath}")
@@ -394,40 +279,8 @@ abstract class AnalyzeSoTask : DefaultTask() {
         logger.lifecycle("=".repeat(50))
         val outputFile = reportFile.get().asFile
         logger.lifecycle("Report saved to: ${outputFile.toURI()}")
-        val htmlFile = File(outputFile.parentFile, "analyze-so-report.html")
+        val htmlFile = File(outputFile.parentFile, AnalyzeSoConstants.REPORT_HTML_FILE_NAME)
         logger.lifecycle("HTML report: ${htmlFile.toURI()}")
-        if (shouldOpenReport()) {
-            openInBrowser(htmlFile)
-        }
         logger.lifecycle("=".repeat(50))
-    }
-
-    private fun shouldOpenReport(): Boolean {
-        val requestedTasks = project.gradle.startParameter.taskNames
-        val isAggregateRun = requestedTasks.any { it == "analyzeSo" || it.endsWith(":analyzeSo") }
-        if (isAggregateRun) return false
-
-        val value =
-            project.providers.gradleProperty("analyzeSo.openReport").orNull
-                ?: project.providers.gradleProperty("analyzeSoOpenReport").orNull
-                ?: project.providers.systemProperty("analyzeSo.openReport").orNull
-                ?: project.providers.systemProperty("analyzeSoOpenReport").orNull
-        return value?.equals("true", ignoreCase = true) == true
-    }
-
-    private fun openInBrowser(htmlFile: File) {
-        if (!htmlFile.exists()) return
-        val uri = htmlFile.toURI().toString()
-        try {
-            val os = (System.getProperty("os.name") ?: "").lowercase()
-            val command = when {
-                os.contains("windows") -> listOf("cmd", "/c", "start", "", uri)
-                os.contains("mac") -> listOf("open", uri)
-                else -> listOf("xdg-open", uri)
-            }
-            ProcessBuilder(command).start()
-        } catch (t: Throwable) {
-            logger.warn("Failed to open HTML report in browser: ${htmlFile.absolutePath}", t)
-        }
     }
 }

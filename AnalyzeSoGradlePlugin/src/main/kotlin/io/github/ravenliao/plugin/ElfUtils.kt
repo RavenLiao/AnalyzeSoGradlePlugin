@@ -7,8 +7,12 @@ object ElfUtils {
      * 检查so文件的ELF段对齐情况，返回(aligned, alignment, alignmentKb)
      */
     fun checkElfAlignmentWithKb(soFile: File): Triple<Boolean, String, Int?> {
+        return checkElfAlignmentWithKb(soFile, "objdump")
+    }
+
+    fun checkElfAlignmentWithKb(soFile: File, objdumpPath: String): Triple<Boolean, String, Int?> {
         return try {
-            val process = ProcessBuilder("objdump", "-p", soFile.absolutePath)
+            val process = ProcessBuilder(objdumpPath, "-p", soFile.absolutePath)
                 .redirectErrorStream(true)
                 .start()
             val output = process.inputStream.bufferedReader().readText()
@@ -31,7 +35,7 @@ object ElfUtils {
         val match = regex.matchEntire(alignment)
         return if (match != null) {
             val exp = match.groupValues[1].toIntOrNull()
-            if (exp != null) (1 shl exp) / 1024 else null
+            if (exp != null && exp in 0..30) (1 shl exp) / 1024 else null
         } else null
     }
 }

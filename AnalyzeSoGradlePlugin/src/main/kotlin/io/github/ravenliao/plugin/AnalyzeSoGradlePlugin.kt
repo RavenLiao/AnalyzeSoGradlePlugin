@@ -12,8 +12,8 @@ import org.gradle.api.tasks.TaskProvider
 class AnalyzeSoGradlePlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
-        val aggregateTask = project.tasks.register("analyzeSo", AggregateAnalyzeSoTask::class.java) {
-            group = "analyze-so"
+        val aggregateTask = project.tasks.register(AnalyzeSoConstants.TASK_AGGREGATE, AggregateAnalyzeSoTask::class.java) {
+            group = AnalyzeSoConstants.GROUP
             description = "Aggregate SO analysis reports for all variants and generate a tabbed HTML report."
             markNotCompatibleWithConfigurationCacheIfSupported(
                 "This task aggregates reports and may use Gradle model types at execution time."
@@ -55,11 +55,11 @@ class AnalyzeSoGradlePlugin : Plugin<Project> {
             // 创建基本的分析任务
             val analyzeTaskName = "analyze${variantNameCapitalized}So"
             val analyzeTask = project.tasks.register(analyzeTaskName, AnalyzeSoTask::class.java) {
-                group = "analyze-so"
+                group = AnalyzeSoConstants.GROUP
                 description = "Analyze SO files for $currentVariantName variant"
                 variantName.set(currentVariantName)
                 reportFile.set(
-                    project.layout.buildDirectory.file("reports/analyze-so/${currentVariantName}/analyze-so-report.json")
+                    project.layout.buildDirectory.file("${AnalyzeSoConstants.REPORTS_DIR}/${currentVariantName}/${AnalyzeSoConstants.REPORT_JSON_FILE_NAME}")
                 )
                 markNotCompatibleWithConfigurationCacheIfSupported(
                     "This task resolves dependencies and accesses Gradle model types at execution time."

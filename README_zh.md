@@ -94,6 +94,12 @@ app/build/reports/analyze-so/Debug/analyze-so-report.html
 - 执行 `analyzeSo` 时，只会打开聚合后的 HTML 报告（每次 Gradle 构建只打开一次）。
 - Windows PowerShell 下如果使用带点的属性名，可用 `"-PanalyzeSo.openReport=true"`（需要引号）。
 
+可选：如果你的环境没有提供 `objdump`（Windows/CI 比较常见），导致报告里 alignment 显示为 `error`，可以手动指定路径：
+
+```bash
+./gradlew analyzeDebugSo -PanalyzeSoObjdumpPath=/path/to/objdump
+```
+
 ## 特别感谢
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): 本项目参考了其实现思路

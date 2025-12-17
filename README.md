@@ -98,6 +98,12 @@ Notes:
 - When running `analyzeSo`, only the aggregate HTML report will be opened (once per Gradle build).
 - On Windows PowerShell, you can also use `"-PanalyzeSo.openReport=true"` (quoted) if you prefer the dotted property name.
 
+Optional: if your environment does not provide `objdump` (common on Windows/CI) and the report shows alignment as `error`, you can specify the executable path:
+
+```bash
+./gradlew analyzeDebugSo -PanalyzeSoObjdumpPath=/path/to/objdump
+```
+
 ## Special Thanks
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): This project references its implementation ideas
