@@ -43,7 +43,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
     abstract val analyzedModules: ListProperty<ModuleSoInfo>
 
     init {
-        group = "analysis-so"
+        group = "analyze-so"
         description = "Analyzes SO files in Android project dependencies for the specified variant"
 
         // 设置默认输出文件
@@ -102,10 +102,12 @@ abstract class AnalyzeSoTask : DefaultTask() {
         return try {
             // 创建 ArtifactView 来获取 JNI 工件
             val artifactView = configuration.incoming.artifactView {
-                attributes.attribute(
-                    Attribute.of("artifactType", String::class.java),
-                    "android-jni"
-                )
+                attributes {
+                    attribute(
+                        Attribute.of("artifactType", String::class.java),
+                        "android-jni"
+                    )
+                }
             }
 
             // 处理每个工件
@@ -174,7 +176,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
 
     // 生成HTML报告
     val htmlFile = File(outputFile.parentFile, "analyze-so-report.html")
-    val templateStream = javaClass.classLoader.getResourceAsStream("so_analysis_report_template.html")
+    val templateStream = javaClass.classLoader?.getResourceAsStream("so_analysis_report_template.html")
     if (templateStream != null) {
         val template = templateStream.bufferedReader(Charsets.UTF_8).readText()
         // 用紧凑JSON，避免HTML体积过大
@@ -235,7 +237,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
         }
 
         logger.lifecycle("=".repeat(50))
-        logger.lifecycle("Report saved to: ${reportFile.get().asFile.absolutePath}")
+        logger.lifecycle("Report saved to: file:\\\\${reportFile.get().asFile.absolutePath}")
         val htmlFile = File(reportFile.get().asFile.parentFile, "analyze-so-report.html")
         logger.lifecycle("HTML report: ${htmlFile.absolutePath}")
         logger.lifecycle("=".repeat(50))

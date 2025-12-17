@@ -56,6 +56,14 @@ plugins {
 
 ## Usage
 
+## Configuration Cache (Gradle)
+ 
+ The analysis tasks may cause Gradle configuration cache to be discarded or fail in some environments. If you encounter issues when configuration cache is enabled, disable it in your `gradle.properties`:
+ 
+ ```properties
+ org.gradle.configuration-cache=false
+ ```
+ 
 After applying the plugin, Gradle will automatically generate analysis tasks for each build variant:
 
 ```bash

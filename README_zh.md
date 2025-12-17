@@ -44,15 +44,23 @@ Other Language：[English](README.md)
 
 在 `build.gradle` 中应用插件：
 
-```kotlin
-plugins {
-    id("io.github.ravenliao.analyze-so") version "$LAST_VERSION"
-}
-```
-
-## 使用方法
-
-应用插件后，Gradle 会为每个构建变体自动生成对应的分析任务：
+ ```kotlin
+ plugins {
+     id("io.github.ravenliao.analyze-so") version "$LAST_VERSION"
+ }
+ ```
+ 
+ ## Configuration Cache（Gradle）
+ 
+ 本插件的分析任务在部分环境下可能会导致 Gradle 的 Configuration Cache 失效或报错。如你开启了 Configuration Cache 并遇到问题，可在项目的 `gradle.properties` 中添加：
+ 
+ ```properties
+ org.gradle.configuration-cache=false
+ ```
+ 
+ ## 使用方法
+ 
+ 应用插件后，Gradle 会为每个构建变体自动生成对应的分析任务：
 
 ```bash
 # 分析特定变体的 so 文件
