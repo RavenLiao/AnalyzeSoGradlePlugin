@@ -8,6 +8,32 @@ Other Language：[English](README.md)
 
 **AnalyzeSoGradlePlugin** 是一个用于分析 Android so 库来源和架构的 Gradle 插件，旨在帮助开发者更好地了解项目中各种依赖引入的 so 文件信息。
 
+## 一句话跑起来
+
+在构建脚本中应用插件：
+
+将 `<latest_version>` 替换为[![Download][version_icon]][version_link] (去掉'v')显示的版本号。
+
+`build.gradle.kts`（Kotlin DSL）
+
+```kotlin
+plugins {
+    id("io.github.ravenliao.analyze-so") version "<latest_version>"
+}
+```
+
+然后直接执行：
+
+```bash
+./gradlew analyzeSo -PanalyzeSoOpenReport=true
+```
+
+说明：Windows PowerShell 下请使用：
+
+```bash
+.\gradlew analyzeSo -PanalyzeSoOpenReport=true
+```
+
 ## 功能特性
 
 ### 已实现
@@ -41,29 +67,32 @@ Other Language：[English](README.md)
 
 本插件已发布至 Maven Central 仓库：
 
- ${LAST_VERSION}: [![Download][version_icon]][version_link] (去掉'v')
+最新版本：[![Download][version_icon]][version_link] (去掉'v')
 
-在 `build.gradle` 中应用插件：
+在 `build.gradle.kts`（Kotlin DSL）中应用插件：
 
- ```kotlin
- plugins {
-     id("io.github.ravenliao.analyze-so") version "$LAST_VERSION"
- }
- ```
- 
- ## Configuration Cache（Gradle）
- 
- 启用 Gradle 的 Configuration Cache 后，本插件的分析任务在部分环境下可能会导致任务运行失败，并使 Configuration Cache entry 被丢弃或报错。如你开启了 Configuration Cache 并遇到问题，可在项目的 `gradle.properties` 中添加：
- 
- ```properties
- org.gradle.configuration-cache=false
- ```
- 
- ## 使用方法
- 
- 应用插件后，Gradle 会为每个构建变体自动生成对应的分析任务：
+```kotlin
+plugins {
+    id("io.github.ravenliao.analyze-so") version "<latest_version>"
+}
+```
+
+在 `build.gradle`（Groovy DSL）中应用插件：
+
+```groovy
+plugins {
+    id 'io.github.ravenliao.analyze-so' version '<latest_version>'
+}
+```
+
+## 使用方法
+
+应用插件后，Gradle 会为每个构建变体自动生成对应的分析任务：
 
 ```bash
+# 推荐：分析所有变体并自动打开报告
+./gradlew analyzeSo -PanalyzeSoOpenReport=true
+
 # 分析特定变体的 so 文件
 ./gradlew analyze[VariantName]So
 
@@ -84,8 +113,18 @@ app/build/reports/analyze-so/[VariantName]/analyze-so-report.html
 app/build/reports/analyze-so/Debug/analyze-so-report.html
 ```
 
-可选：自动用默认浏览器打开 HTML 报告：
+## 配置
 
+### Configuration Cache（Gradle）
+
+启用 Gradle 的 Configuration Cache 后，本插件的分析任务在部分环境下可能会导致任务运行失败，并使 Configuration Cache entry 被丢弃或报错。如你开启了 Configuration Cache 并遇到问题，可在项目的 `gradle.properties` 中添加：
+```properties
+org.gradle.configuration-cache=false
+```
+
+### 自动打开报告
+
+可选：自动用默认浏览器打开 HTML 报告：
 ```bash
 ./gradlew analyzeSo -PanalyzeSoOpenReport=true
 ```
@@ -94,14 +133,16 @@ app/build/reports/analyze-so/Debug/analyze-so-report.html
 - 执行 `analyzeSo` 时，只会打开聚合后的 HTML 报告（每次 Gradle 构建只打开一次）。
 - Windows PowerShell 下如果使用带点的属性名，可用 `"-PanalyzeSo.openReport=true"`（需要引号）。
 
-可选：如果你的环境没有提供 `objdump`（Windows/CI 比较常见），导致报告里 alignment 显示为 `error`，可以手动指定路径：
+### 指定 `objdump` 路径
 
+可选：如果你的环境没有提供 `objdump`（Windows/CI 比较常见），导致报告里 alignment 显示为 `error`，可以手动指定路径：
 ```bash
 ./gradlew analyzeDebugSo -PanalyzeSoObjdumpPath=/path/to/objdump
 ```
 
-可选：如果你的依赖中包含较大的 AAR/ZIP/JAR，插件在扫描其中的 `.so` 时会尝试解包。为避免极端情况下解包导致构建变慢，默认只会解包不超过 **200MB** 的 archive。你可以修改或关闭这个限制：
+### 限制 archive 解包大小
 
+可选：如果你的依赖中包含较大的 AAR/ZIP/JAR，插件在扫描其中的 `.so` 时会尝试解包。为避免极端情况下解包导致构建变慢，默认只会解包不超过 **200MB** 的 archive。你可以修改或关闭这个限制：
 ```bash
 # 将最大可解包大小设置为 500MB
 ./gradlew analyzeDebugSo -PanalyzeSoMaxArchiveSizeMb=500

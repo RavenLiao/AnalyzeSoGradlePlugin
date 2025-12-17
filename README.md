@@ -6,13 +6,38 @@ Other Language: [中文](README_zh.md)
 
 **AnalyzeSoGradlePlugin** is a Gradle plugin for analyzing the source and architecture of Android so libraries, helping developers better understand the so files introduced by various dependencies in their project.
 
+## TL;DR
+
+In your build script:
+
+Replace `<latest_version>` with the version shown in [![Download][version_icon]](excluding 'v')[version_link]
+
+`build.gradle.kts` (Kotlin DSL)
+
+```kotlin
+plugins {
+    id("io.github.ravenliao.analyze-so") version "<latest_version>"
+}
+```
+
+Then run:
+
+```bash
+./gradlew analyzeSo -PanalyzeSoOpenReport=true
+```
+
+Note: on Windows PowerShell, use:
+
+```bash
+.\gradlew analyzeSo -PanalyzeSoOpenReport=true
+```
 
 
 ## Features
 
 ### Implemented
 - Output the source and architecture information of so libraries
-- Detect 16KB memory page size to help adapt to Android 15 requirements([Support 16 KB page sizes](https://developer.android.com/guide/practices/page-sizes))
+- Detect 16KB memory page size to help adapt to Android 15 requirements ([Support 16 KB page sizes](https://developer.android.com/guide/practices/page-sizes))
 - Beautiful HTML report output to quickly identify native libraries that are not compatible with Android 15 and their sources
 - Show an expandable "Dependency paths" section in the HTML report to trace transitive native libraries back to your top-level direct dependencies (one shortest resolved path per top-level direct dependency)
 - Add task to aggregate all variants and generate a combined HTML report
@@ -45,36 +70,39 @@ Purpose: the plugin runs `objdump -p` to parse ELF Program Headers for `Align 2*
 
 This plugin is published on Maven Central:
 
-${LAST_VERSION}: [![Download][version_icon]][version_link] (excluding 'v')
+Latest version: [![Download][version_icon]][version_link] (excluding 'v')
 
-In your `build.gradle` file:
+In your `build.gradle.kts` (Kotlin DSL) file:
 
 ```kotlin
 plugins {
-    id("io.github.ravenliao.analyze-so") version "$LAST_VERSION"
+    id("io.github.ravenliao.analyze-so") version "<latest_version>"
+}
+```
+
+In your `build.gradle` (Groovy DSL) file:
+
+```groovy
+plugins {
+    id 'io.github.ravenliao.analyze-so' version '<latest_version>'
 }
 ```
 
 ## Usage
 
-## Configuration Cache (Gradle)
- 
- Enabling Gradle Configuration Cache may cause these analysis tasks to fail and/or the configuration cache entry to be discarded in some environments. If you encounter issues when configuration cache is enabled, disable it in your `gradle.properties`:
- 
- ```properties
- org.gradle.configuration-cache=false
- ```
- 
 After applying the plugin, Gradle will automatically generate analysis tasks for each build variant:
 
 ```bash
+# Recommended: analyze all variants and open the report
+./gradlew analyzeSo -PanalyzeSoOpenReport=true
+
 # Analyze so files for a specific variant
 ./gradlew analyze[VariantName]So
 
 # For example, analyze debug variant
 ./gradlew analyzeDebugSo
 
-# Analyze so files for all variant
+# Analyze so files for all variants
 ./gradlew analyzeSo
 ```
 
@@ -88,6 +116,18 @@ For example, for the debug variant, the report will be at:
 app/build/reports/analyze-so/Debug/analyze-so-report.html
 ```
 
+## Configuration
+
+### Configuration Cache (Gradle)
+
+Enabling Gradle Configuration Cache may cause these analysis tasks to fail and/or the configuration cache entry to be discarded in some environments. If you encounter issues when configuration cache is enabled, disable it in your `gradle.properties`:
+
+```properties
+org.gradle.configuration-cache=false
+```
+
+### Open report automatically
+
 Optional: open the HTML report in your default browser automatically:
 
 ```bash
@@ -98,11 +138,15 @@ Notes:
 - When running `analyzeSo`, only the aggregate HTML report will be opened (once per Gradle build).
 - On Windows PowerShell, you can also use `"-PanalyzeSo.openReport=true"` (quoted) if you prefer the dotted property name.
 
+### Provide `objdump` path
+
 Optional: if your environment does not provide `objdump` (common on Windows/CI) and the report shows alignment as `error`, you can specify the executable path:
 
 ```bash
 ./gradlew analyzeDebugSo -PanalyzeSoObjdumpPath=/path/to/objdump
 ```
+
+### Limit archive extraction size
 
 Optional: if your dependencies contain large AAR/ZIP/JAR artifacts, the plugin may extract them to scan `.so` files. To avoid worst-case build slowdowns, it only extracts archives up to **200MB** by default. You can override or disable this limit:
 
@@ -119,7 +163,7 @@ Note: On Windows PowerShell, if you prefer the dotted property name, use `"-Pana
 ## Special Thanks
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): This project references its implementation ideas
-- [LibChecker/LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules): Thank for so info database
+- [LibChecker/LibChecker-Rules](https://github.com/LibChecker/LibChecker-Rules): Thanks for the so info database
 
 ## License
 
