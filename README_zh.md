@@ -84,6 +84,16 @@ app/build/reports/analyze-so/[VariantName]/analyze-so-report.html
 app/build/reports/analyze-so/Debug/analyze-so-report.html
 ```
 
+可选：自动用默认浏览器打开 HTML 报告：
+
+```bash
+./gradlew analyzeSo -PanalyzeSoOpenReport=true
+```
+
+说明：
+- 执行 `analyzeSo` 时，只会打开聚合后的 HTML 报告（每次 Gradle 构建只打开一次）。
+- Windows PowerShell 下如果使用带点的属性名，可用 `"-PanalyzeSo.openReport=true"`（需要引号）。
+
 ## 特别感谢
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): 本项目参考了其实现思路

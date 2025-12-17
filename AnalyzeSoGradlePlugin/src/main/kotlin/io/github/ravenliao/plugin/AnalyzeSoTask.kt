@@ -396,6 +396,38 @@ abstract class AnalyzeSoTask : DefaultTask() {
         logger.lifecycle("Report saved to: ${outputFile.toURI()}")
         val htmlFile = File(outputFile.parentFile, "analyze-so-report.html")
         logger.lifecycle("HTML report: ${htmlFile.toURI()}")
+        if (shouldOpenReport()) {
+            openInBrowser(htmlFile)
+        }
         logger.lifecycle("=".repeat(50))
+    }
+
+    private fun shouldOpenReport(): Boolean {
+        val requestedTasks = project.gradle.startParameter.taskNames
+        val isAggregateRun = requestedTasks.any { it == "analyzeSo" || it.endsWith(":analyzeSo") }
+        if (isAggregateRun) return false
+
+        val value =
+            project.providers.gradleProperty("analyzeSo.openReport").orNull
+                ?: project.providers.gradleProperty("analyzeSoOpenReport").orNull
+                ?: project.providers.systemProperty("analyzeSo.openReport").orNull
+                ?: project.providers.systemProperty("analyzeSoOpenReport").orNull
+        return value?.equals("true", ignoreCase = true) == true
+    }
+
+    private fun openInBrowser(htmlFile: File) {
+        if (!htmlFile.exists()) return
+        val uri = htmlFile.toURI().toString()
+        try {
+            val os = (System.getProperty("os.name") ?: "").lowercase()
+            val command = when {
+                os.contains("windows") -> listOf("cmd", "/c", "start", "", uri)
+                os.contains("mac") -> listOf("open", uri)
+                else -> listOf("xdg-open", uri)
+            }
+            ProcessBuilder(command).start()
+        } catch (t: Throwable) {
+            logger.warn("Failed to open HTML report in browser: ${htmlFile.absolutePath}", t)
+        }
     }
 }

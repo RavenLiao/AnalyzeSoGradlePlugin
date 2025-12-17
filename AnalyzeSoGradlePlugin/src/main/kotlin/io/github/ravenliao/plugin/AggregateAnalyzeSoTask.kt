@@ -3,17 +3,24 @@ package io.github.ravenliao.plugin
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.TaskAction
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Aggregate SO analysis reports for all variants and generate a tabbed HTML report.
  */
 abstract class AggregateAnalyzeSoTask : DefaultTask() {
+    private val openOnceService =
+        project.gradle.sharedServices.registerIfAbsent("analyzeSoOpenReportOnce", OpenReportOnceService::class.java) {}
+
     init {
         group = "analyze-so"
         description =
             "Aggregate SO analysis reports for all variants and generate a tabbed HTML report."
+        usesService(openOnceService)
     }
 
     @TaskAction
@@ -42,6 +49,43 @@ abstract class AggregateAnalyzeSoTask : DefaultTask() {
         val aggregateHtmlFile = File(aggregateDir, "analyze-so-report.html")
         aggregateHtmlFile.writeText(buildAggregateHtml(variantJsons), Charsets.UTF_8)
         logger.lifecycle("[analyzeSo] Aggregate report generated: ${aggregateHtmlFile.toURI()}")
+        if (shouldOpenReport() && openOnceService.get().tryAcquire()) {
+            openInBrowser(aggregateHtmlFile)
+        }
+    }
+
+    abstract class OpenReportOnceService : BuildService<BuildServiceParameters.None>, AutoCloseable {
+        private val opened = AtomicBoolean(false)
+
+        fun tryAcquire(): Boolean = opened.compareAndSet(false, true)
+
+        override fun close() {
+        }
+    }
+
+    private fun shouldOpenReport(): Boolean {
+        val value =
+            project.providers.gradleProperty("analyzeSo.openReport").orNull
+                ?: project.providers.gradleProperty("analyzeSoOpenReport").orNull
+                ?: project.providers.systemProperty("analyzeSo.openReport").orNull
+                ?: project.providers.systemProperty("analyzeSoOpenReport").orNull
+        return value?.equals("true", ignoreCase = true) == true
+    }
+
+    private fun openInBrowser(htmlFile: File) {
+        if (!htmlFile.exists()) return
+        val uri = htmlFile.toURI().toString()
+        try {
+            val os = (System.getProperty("os.name") ?: "").lowercase()
+            val command = when {
+                os.contains("windows") -> listOf("cmd", "/c", "start", "", uri)
+                os.contains("mac") -> listOf("open", uri)
+                else -> listOf("xdg-open", uri)
+            }
+            ProcessBuilder(command).start()
+        } catch (t: Throwable) {
+            logger.warn("Failed to open HTML report in browser: ${htmlFile.absolutePath}", t)
+        }
     }
 
     private fun buildAggregateHtml(variantJsons: Map<String, String>): String {
@@ -60,4 +104,4 @@ abstract class AggregateAnalyzeSoTask : DefaultTask() {
                 .replace("__SO_ANALYSIS_JSON_DATA__", only)
         }
     }
-} 
+}

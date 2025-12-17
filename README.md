@@ -88,6 +88,16 @@ For example, for the debug variant, the report will be at:
 app/build/reports/analyze-so/Debug/analyze-so-report.html
 ```
 
+Optional: open the HTML report in your default browser automatically:
+
+```bash
+./gradlew analyzeSo -PanalyzeSoOpenReport=true
+```
+
+Notes:
+- When running `analyzeSo`, only the aggregate HTML report will be opened (once per Gradle build).
+- On Windows PowerShell, you can also use `"-PanalyzeSo.openReport=true"` (quoted) if you prefer the dotted property name.
+
 ## Special Thanks
 
 - [mainlxl/AnalyzeSoPlugin](https://github.com/mainlxl/AnalyzeSoPlugin): This project references its implementation ideas
