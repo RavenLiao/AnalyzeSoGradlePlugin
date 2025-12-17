@@ -41,7 +41,7 @@ abstract class AggregateAnalyzeSoTask : DefaultTask() {
         aggregateDir.mkdirs()
         val aggregateHtmlFile = File(aggregateDir, "analyze-so-report.html")
         aggregateHtmlFile.writeText(buildAggregateHtml(variantJsons), Charsets.UTF_8)
-        logger.lifecycle("[analyzeSo] Aggregate report generated: file://${aggregateHtmlFile.absolutePath}")
+        logger.lifecycle("[analyzeSo] Aggregate report generated: ${aggregateHtmlFile.toURI()}")
     }
 
     private fun buildAggregateHtml(variantJsons: Map<String, String>): String {

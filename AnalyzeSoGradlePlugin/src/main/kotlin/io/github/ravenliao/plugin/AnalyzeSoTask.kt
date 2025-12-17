@@ -321,31 +321,32 @@ abstract class AnalyzeSoTask : DefaultTask() {
      * 生成分析报告
      */
     private fun generateReport(modules: List<ModuleSoInfo>) {
-    val outputFile = reportFile.get().asFile
-    // 确保输出目录存在
-    outputFile.parentFile?.mkdirs()
-    val json = Json { prettyPrint = true }
-    val jsonContent = json.encodeToString(modules)
-    outputFile.writeText(jsonContent, Charsets.UTF_8)
+        val outputFile = reportFile.get().asFile
+        // 确保输出目录存在
+        outputFile.parentFile?.mkdirs()
+        val json = Json { prettyPrint = true }
+        val jsonContent = json.encodeToString(modules)
+        outputFile.writeText(jsonContent, Charsets.UTF_8)
 
-    // 生成HTML报告
-    val htmlFile = File(outputFile.parentFile, "analyze-so-report.html")
-    val templateStream = javaClass.classLoader?.getResourceAsStream("so_analysis_report_template.html")
-    if (templateStream != null) {
-        val template = templateStream.bufferedReader(Charsets.UTF_8).readText()
-        // 用紧凑JSON，避免HTML体积过大
-        val compactJson = Json.encodeToString(modules)
-        val htmlContent = template.replace("__SO_ANALYSIS_JSON_DATA__", compactJson)
-        htmlFile.writeText(htmlContent, Charsets.UTF_8)
-    } else {
-        logger.warn("so_analysis_report_template.html not found in resources, HTML report not generated.")
+        // 生成HTML报告
+        val htmlFile = File(outputFile.parentFile, "analyze-so-report.html")
+        val templateStream =
+            javaClass.classLoader?.getResourceAsStream("so_analysis_report_template.html")
+        if (templateStream != null) {
+            val template = templateStream.bufferedReader(Charsets.UTF_8).readText()
+            // 用紧凑JSON，避免HTML体积过大
+            val compactJson = Json.encodeToString(modules)
+            val htmlContent = template.replace("__SO_ANALYSIS_JSON_DATA__", compactJson)
+            htmlFile.writeText(htmlContent, Charsets.UTF_8)
+        } else {
+            logger.warn("so_analysis_report_template.html not found in resources, HTML report not generated.")
+        }
+
+        logger.info("SO analysis report generated: ${outputFile.absolutePath}")
+        logger.info("SO analysis HTML report generated: ${htmlFile.absolutePath}")
+        // 更新内部属性（用于缓存）
+        analyzedModules.set(modules)
     }
-
-    logger.info("SO analysis report generated: ${outputFile.absolutePath}")
-    logger.info("SO analysis HTML report generated: ${htmlFile.absolutePath}")
-    // 更新内部属性（用于缓存）
-    analyzedModules.set(modules)
-}
 
     /**
      * 记录分析结果统计
@@ -391,9 +392,10 @@ abstract class AnalyzeSoTask : DefaultTask() {
         }
 
         logger.lifecycle("=".repeat(50))
-        logger.lifecycle("Report saved to: file:\\\\${reportFile.get().asFile.absolutePath}")
-        val htmlFile = File(reportFile.get().asFile.parentFile, "analyze-so-report.html")
-        logger.lifecycle("HTML report: ${htmlFile.absolutePath}")
+        val outputFile = reportFile.get().asFile
+        logger.lifecycle("Report saved to: ${outputFile.toURI()}")
+        val htmlFile = File(outputFile.parentFile, "analyze-so-report.html")
+        logger.lifecycle("HTML report: ${htmlFile.toURI()}")
         logger.lifecycle("=".repeat(50))
     }
 }
