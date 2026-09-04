@@ -8,6 +8,20 @@ Other Language：[English](README.md)
 
 **AnalyzeSoGradlePlugin** 是一个用于分析 Android so 库来源和架构的 Gradle 插件，旨在帮助开发者更好地了解项目中各种依赖引入的 so 文件信息。
 
+## 兼容性（重要）
+
+**支持范围：Gradle 7.4+、AGP 7.3+；使用 Gradle 9 时要求 AGP 8.4+。**
+
+Gradle 9 不能与 AGP 7.x 组合使用，运行 Gradle 9 还需要 JDK 17 或更高版本。Gradle 10 目前尚未正式发布。
+
+已验证组合：
+
+| Gradle | AGP | JDK | 结果 |
+| --- | --- | --- | --- |
+| 7.4.2 | 7.3.1 | 11 | 通过 |
+| 8.7 | 8.5.2 | 17 | 通过 |
+| 9.7.1 | 9.3.0 | 21 | 通过 |
+
 ## 一句话跑起来
 
 在构建脚本中应用插件：

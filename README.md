@@ -6,6 +6,20 @@ Other Language: [中文](README_zh.md)
 
 **AnalyzeSoGradlePlugin** is a Gradle plugin for analyzing the source and architecture of Android so libraries, helping developers better understand the so files introduced by various dependencies in their project.
 
+## Compatibility (Prominent)
+
+**Supported range: Gradle 7.4+ and AGP 7.3+. Gradle 9 requires AGP 8.4+.**
+
+Gradle 9 cannot be used with AGP 7.x, and Gradle 9 requires JDK 17 or newer to run. Gradle 10 has not been released yet.
+
+Verified combinations:
+
+| Gradle | AGP | JDK | Result |
+| --- | --- | --- | --- |
+| 7.4.2 | 7.3.1 | 11 | Passed |
+| 8.7 | 8.5.2 | 17 | Passed |
+| 9.7.1 | 9.3.0 | 21 | Passed |
+
 ## TL;DR
 
 In your build script:
@@ -63,7 +77,6 @@ Purpose: the plugin runs `objdump -p` to parse ELF Program Headers for `Align 2*
 1) Download and run the TDM-GCC installer: https://jmeubank.github.io/tdm-gcc/
 2) During setup, choose "Add to PATH" (or the equivalent option).
 3) Finish installation. `objdump.exe` will be available to Gradle.
-
 
 ## Quick Start
 **How to apply the Gradle plugin:**

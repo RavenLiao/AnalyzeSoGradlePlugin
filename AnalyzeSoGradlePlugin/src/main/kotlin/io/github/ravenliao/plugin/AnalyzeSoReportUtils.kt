@@ -5,15 +5,7 @@ import org.gradle.api.Project
 
 internal object AnalyzeSoReportUtils {
 
-    fun shouldOpenReport(project: Project, allowWhenAggregateRun: Boolean): Boolean {
-        if (!allowWhenAggregateRun) {
-            val requestedTasks = project.gradle.startParameter.taskNames
-            val isAggregateRun = requestedTasks.any {
-                it == AnalyzeSoConstants.TASK_AGGREGATE || it.endsWith(":" + AnalyzeSoConstants.TASK_AGGREGATE)
-            }
-            if (isAggregateRun) return false
-        }
-
+    fun readOpenReport(project: Project): Boolean {
         val value =
             project.providers.gradleProperty(AnalyzeSoConstants.PROP_OPEN_REPORT_DOT).orNull
                 ?: project.providers.gradleProperty(AnalyzeSoConstants.PROP_OPEN_REPORT_CAMEL).orNull
@@ -21,6 +13,10 @@ internal object AnalyzeSoReportUtils {
                 ?: project.providers.systemProperty(AnalyzeSoConstants.PROP_OPEN_REPORT_CAMEL).orNull
 
         return value?.equals("true", ignoreCase = true) == true
+    }
+
+    fun isAggregateRun(project: Project): Boolean = project.gradle.startParameter.taskNames.any {
+        it == AnalyzeSoConstants.TASK_AGGREGATE || it.endsWith(":" + AnalyzeSoConstants.TASK_AGGREGATE)
     }
 
     fun openInBrowser(logger: org.gradle.api.logging.Logger, htmlFile: File) {

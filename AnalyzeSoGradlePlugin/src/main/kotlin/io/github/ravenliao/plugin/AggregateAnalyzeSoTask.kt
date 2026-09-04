@@ -3,6 +3,10 @@ package io.github.ravenliao.plugin
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
+import org.gradle.api.provider.Property
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
@@ -10,6 +14,12 @@ import java.io.File
  * Aggregate SO analysis reports for all variants and generate a tabbed HTML report.
  */
 abstract class AggregateAnalyzeSoTask : DefaultTask() {
+
+    @get:OutputFile
+    abstract val aggregateReportFile: RegularFileProperty
+
+    @get:Input
+    abstract val openReport: Property<Boolean>
 
     private val openOnceService =
         project.gradle.sharedServices.registerIfAbsent("analyzeSoOpenReportOnce", OpenReportOnceService::class.java) {}
@@ -19,11 +29,18 @@ abstract class AggregateAnalyzeSoTask : DefaultTask() {
         description =
             "Aggregate SO analysis reports for all variants and generate a tabbed HTML report."
         usesService(openOnceService)
+        aggregateReportFile.convention(
+            project.layout.buildDirectory.file(
+                "${AnalyzeSoConstants.REPORTS_DIR}/${AnalyzeSoConstants.AGGREGATE_DIR_NAME}/${AnalyzeSoConstants.REPORT_HTML_FILE_NAME}"
+            )
+        )
+        openReport.convention(false)
     }
 
     @TaskAction
     fun aggregate() {
-        val reportsDir = project.layout.buildDirectory.file(AnalyzeSoConstants.REPORTS_DIR).get().asFile
+        val aggregateFile = aggregateReportFile.get().asFile
+        val reportsDir = aggregateFile.parentFile.parentFile
         if (!reportsDir.exists()) {
             logger.lifecycle("[analyzeSo] Analysis report directory not found: ${reportsDir.absolutePath}")
             return
@@ -43,12 +60,11 @@ abstract class AggregateAnalyzeSoTask : DefaultTask() {
             return
         }
         // Generate aggregate HTML
-        val aggregateDir = File(reportsDir, AnalyzeSoConstants.AGGREGATE_DIR_NAME)
-        aggregateDir.mkdirs()
-        val aggregateHtmlFile = File(aggregateDir, AnalyzeSoConstants.REPORT_HTML_FILE_NAME)
+        val aggregateHtmlFile = aggregateFile
+        aggregateHtmlFile.parentFile?.mkdirs()
         aggregateHtmlFile.writeText(buildAggregateHtml(variantJsons), Charsets.UTF_8)
         logger.lifecycle("[analyzeSo] Aggregate report generated: ${aggregateHtmlFile.toURI()}")
-        if (AnalyzeSoReportUtils.shouldOpenReport(project, allowWhenAggregateRun = true) && openOnceService.get().tryAcquire()) {
+        if (openReport.get() && openOnceService.get().tryAcquire()) {
             AnalyzeSoReportUtils.openInBrowser(logger, aggregateHtmlFile)
         }
     }

@@ -15,6 +15,12 @@ class AnalyzeSoGradlePlugin : Plugin<Project> {
         val aggregateTask = project.tasks.register(AnalyzeSoConstants.TASK_AGGREGATE, AggregateAnalyzeSoTask::class.java) {
             group = AnalyzeSoConstants.GROUP
             description = "Aggregate SO analysis reports for all variants and generate a tabbed HTML report."
+            aggregateReportFile.set(
+                project.layout.buildDirectory.file(
+                    "${AnalyzeSoConstants.REPORTS_DIR}/${AnalyzeSoConstants.AGGREGATE_DIR_NAME}/${AnalyzeSoConstants.REPORT_HTML_FILE_NAME}"
+                )
+            )
+            openReport.set(AnalyzeSoReportUtils.readOpenReport(project))
             markNotCompatibleWithConfigurationCacheIfSupported(
                 "This task aggregates reports and may use Gradle model types at execution time."
             )
@@ -60,6 +66,16 @@ class AnalyzeSoGradlePlugin : Plugin<Project> {
                 variantName.set(currentVariantName)
                 reportFile.set(
                     project.layout.buildDirectory.file("${AnalyzeSoConstants.REPORTS_DIR}/${currentVariantName}/${AnalyzeSoConstants.REPORT_JSON_FILE_NAME}")
+                )
+                analysisConfiguration.set(
+                    project.configurations.findByName("${currentVariantName}RuntimeClasspath")
+                        ?: project.configurations.findByName("${currentVariantName}CompileClasspath")
+                )
+                objdumpPath.set(AnalyzeSoReportUtils.readObjdumpPath(project))
+                openReport.set(AnalyzeSoReportUtils.readOpenReport(project))
+                aggregateRequested.set(AnalyzeSoReportUtils.isAggregateRun(project))
+                maxArchiveSizeBytes.set(
+                    AnalyzeSoReportUtils.readMaxArchiveSizeBytesOrNull(project) ?: -1L
                 )
                 markNotCompatibleWithConfigurationCacheIfSupported(
                     "This task resolves dependencies and accesses Gradle model types at execution time."

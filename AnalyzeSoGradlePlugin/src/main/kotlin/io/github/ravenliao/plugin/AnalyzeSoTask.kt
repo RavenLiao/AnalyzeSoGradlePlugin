@@ -41,6 +41,21 @@ abstract class AnalyzeSoTask : DefaultTask() {
     @get:OutputFile
     abstract val reportFile: RegularFileProperty
 
+    @get:Internal
+    abstract val analysisConfiguration: Property<Configuration>
+
+    @get:Input
+    abstract val objdumpPath: Property<String>
+
+    @get:Input
+    abstract val openReport: Property<Boolean>
+
+    @get:Input
+    abstract val aggregateRequested: Property<Boolean>
+
+    @get:Input
+    abstract val maxArchiveSizeBytes: Property<Long>
+
     /**
      * 分析到的模块信息列表（用于构建缓存和增量构建）
      */
@@ -57,6 +72,12 @@ abstract class AnalyzeSoTask : DefaultTask() {
         reportFile.convention(
             project.layout.buildDirectory.file("${AnalyzeSoConstants.REPORTS_DIR}/${AnalyzeSoConstants.REPORT_JSON_FILE_NAME}")
         )
+        objdumpPath.convention(AnalyzeSoReportUtils.readObjdumpPath(project))
+        openReport.convention(AnalyzeSoReportUtils.readOpenReport(project))
+        aggregateRequested.convention(AnalyzeSoReportUtils.isAggregateRun(project))
+        maxArchiveSizeBytes.convention(
+            AnalyzeSoReportUtils.readMaxArchiveSizeBytesOrNull(project) ?: -1L
+        )
 
         // 强制任务每次都执行，不走缓存
         outputs.upToDateWhen { false }
@@ -69,7 +90,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
 
         try {
             // 1. 获取配置
-            val configuration = findConfiguration(variant)
+            val configuration = analysisConfiguration.orNull
             if (configuration == null) {
                 logger.warn("Configuration for variant '$variant' not found. Skipping analysis.")
                 generateReport(emptyList())
@@ -77,8 +98,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
             }
 
             // 2. 分析 SO 文件
-            val objdumpPath = AnalyzeSoReportUtils.readObjdumpPath(project)
-            val modules = analyzeNativeLibraries(configuration, objdumpPath)
+            val modules = analyzeNativeLibraries(configuration, objdumpPath.get())
 
             // 3. 生成报告
             generateReport(modules)
@@ -89,7 +109,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
             // 打开报告
             val outputFile = reportFile.get().asFile
             val htmlFile = File(outputFile.parentFile, AnalyzeSoConstants.REPORT_HTML_FILE_NAME)
-            if (AnalyzeSoReportUtils.shouldOpenReport(project, allowWhenAggregateRun = false) && openOnceService.get().tryAcquire()) {
+            if (openReport.get() && !aggregateRequested.get() && openOnceService.get().tryAcquire()) {
                 AnalyzeSoReportUtils.openInBrowser(logger, htmlFile)
             }
 
@@ -102,12 +122,6 @@ abstract class AnalyzeSoTask : DefaultTask() {
     /**
      * 查找指定变体的配置
      */
-    private fun findConfiguration(variant: String): Configuration? {
-        val configurationName = "${variant}RuntimeClasspath"
-        return project.configurations.findByName(configurationName)
-            ?: project.configurations.findByName("${variant}CompileClasspath")
-    }
-
     /**
      * 分析配置中的原生库
      */
@@ -157,7 +171,7 @@ abstract class AnalyzeSoTask : DefaultTask() {
 
         if (!isArchiveFile(artifactFile)) return emptyList()
 
-        val maxArchiveSizeBytes = AnalyzeSoReportUtils.readMaxArchiveSizeBytesOrNull(project)
+        val maxArchiveSizeBytes = maxArchiveSizeBytes.get().takeIf { it > 0L }
         if (maxArchiveSizeBytes != null && artifactFile.length() > maxArchiveSizeBytes) {
             val actualMb = artifactFile.length() / (1024L * 1024L)
             val limitMb = maxArchiveSizeBytes / (1024L * 1024L)
